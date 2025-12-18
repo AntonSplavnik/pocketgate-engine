@@ -1,0 +1,27 @@
+{
+    "configurations": [
+        {
+            "name": "Pico",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/Users/antonsplavnik/Pico/pico-sdk/src/common/*/include",
+                "/Users/antonsplavnik/Pico/pico-sdk/src/rp2_common/*/include",
+                "/Users/antonsplavnik/Pico/pico-sdk/src/rp2040/*/include",
+                "/Users/antonsplavnik/Pico/pico-sdk/src/rp2350/*/include",
+                "/Users/antonsplavnik/Pico/pico-sdk/src/boards/include",
+                "${workspaceFolder}/build/generated/pico_base"
+            ],
+            "defines": [
+                "PICO_BOARD=pico",
+                "PICO_BUILD=1",
+                "PICO_NO_HARDWARE=0",
+                "PICO_ON_DEVICE=1",
+                "PICO_RP2040=1"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "gcc-arm"
+        }
+    ],
+    "version": 4
+}
