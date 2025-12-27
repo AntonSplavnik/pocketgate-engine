@@ -1,0 +1,87 @@
+#include "pico/stdlib.h"
+#include "display.h"
+#include "display_internal.h"
+#include "st7735_driver.h"
+
+void init_display_commands() {
+
+	// Software reset first
+	send_command(ST7735_SWRESET);
+	sleep_ms(150);
+
+	// Wake up display
+	send_command(ST7735_SLPOUT);
+	sleep_ms(120);
+
+	// Set pixel format to RGB565 (16-bit color)
+	send_command(ST7735_COLMOD);
+	send_data_byte(0x05);  // 0x05 = 16-bit/pixel (RGB565)
+
+	// Set screen orientation (optional, depends on your physical setup)
+	send_command(ST7735_MADCTL);
+	send_data_byte(0x00);  // 0x00 = normal, or try 0xC0, 0x60, 0xA0 for rotation
+
+	// Set frame rate
+	send_command(ST7735_FRMCTR1);
+	send_data_byte(0x01);  // RTNA
+	send_data_byte(0x2C);  // FPA
+	send_data_byte(0x2D);  // BPA
+
+	// Normal display mode
+	send_command(ST7735_NORON);
+
+	// Turn on display
+	send_command(ST7735_DISPON);
+	sleep_ms(100);
+}
+
+void set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+	send_command(ST7735_CASET);
+	send_data_byte(x1 >> 8);
+	send_data_byte(x1 & 0xFF);
+	send_data_byte(x2 >> 8);
+	send_data_byte(x2 & 0xFF);
+
+	send_command(ST7735_RASET);
+	send_data_byte(y1 >> 8);
+	send_data_byte(y1 & 0xFF);
+	send_data_byte(y2 >> 8);
+	send_data_byte(y2 & 0xFF);
+
+	send_command(ST7735_RAMWR);
+}
+
+void color_test1() {
+	set_window(0, 0, 127, 159);  // Full screen
+
+	for (int i = 0; i < 20480; i++) {
+		send_data_byte(0xF8);
+		send_data_byte(0x00);
+	}
+}
+void color_test2() {
+	set_window(0, 0, 127, 159);
+
+	// Fill entire screen with black first
+	for (int i = 0; i < 20480; i++) {
+		send_data_byte(0x00);
+		send_data_byte(0x00);
+	}
+}
+void display_toggle_test() {
+	// Turn display off
+	send_command(ST7735_DISPOFF);
+	sleep_ms(1000);
+
+	// Turn display on
+	send_command(ST7735_DISPON);
+	sleep_ms(1000);
+
+	// Repeat 3 times
+	for (int i = 0; i < 3; i++) {
+		send_command(ST7735_DISPOFF);
+		sleep_ms(500);
+		send_command(ST7735_DISPON);
+		sleep_ms(500);
+	}
+}

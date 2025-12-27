@@ -3,6 +3,7 @@
 #include "hardware_config.h"
 #include "display.h"
 #include "display_internal.h"
+#include "spi.h"
 
 // Low-level SPI communication
 void send_command(uint8_t cmd) {
@@ -31,17 +32,6 @@ void init_pin(int pin, enum gpio_dir GPIO, int voltage) {
 	gpio_put(pin, voltage);
 }
 
-// Hardware initialization
-void init_SPI_bus() {
-	// Initialize SPI at 62.5 MHz
-	spi_init(spi0, 62500000);
-	// Set SPI format (8 bits, mode 0)
-	spi_set_format(spi0, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
-}
-void init_SPI_pins() {
-	gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
-	gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
-}
 void init_control_pins_as_GPIO() {
 	// Initialize CS (Chip Select)
 	init_pin(PIN_TFT_CS, GPIO_OUT, 1); // Start HIGH (not selected)
@@ -61,6 +51,7 @@ void reset_display() {
 	sleep_ms(120);           // Wait for display to boot
 }
 
+
 // Main display initialization
 void init_display(){
 	init_SPI_bus();
@@ -68,4 +59,9 @@ void init_display(){
 	init_control_pins_as_GPIO();
 	reset_display();
 	init_display_commands();
+
+	color_test1();
+	sleep_ms(1000);
+	color_test2();
 }
+

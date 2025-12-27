@@ -34,7 +34,7 @@ stdio_init_all()                  // Initialize USB/UART for printf/scanf (call 
 printf("text %d\n", value)        // Print to USB serial (requires stdio_init_all)
 ```
 
-**Usage:**
+**Usag
 ```cpp
 int main() {
     stdio_init_all();             // Enable USB communication

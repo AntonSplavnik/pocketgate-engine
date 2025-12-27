@@ -7,22 +7,16 @@ Initialize CMakeLists.txt
 Configure SPI pins for display
 Test basic "Hello World" blink
 
-
 Get ST7735 display running
-
 Initialize SPI (aim for 62.5 MHz)
 Write pixel/rectangle drawing functions
 Test with: fill screen, draw colored rectangles
+
 Goal: Draw a moving square with button input
-
-
 Input system
-
 Set up GPIO for Sprig button matrix
 Debounce logic
 Map to game inputs (up/down/left/right/A/B)
-
-
 
 **Phase 2: Rendering Core (Week 2)**
 4. Framebuffer setup
