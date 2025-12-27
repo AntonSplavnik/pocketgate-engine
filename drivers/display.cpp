@@ -44,6 +44,7 @@ void init_backlight_pwm() {
 	// Set PWM frequency (1 kHz is good for backlights)
 	pwm_set_wrap(slice_num, 999);  // TOP value (0-999 = 1000 steps)
 
+	// Clock divider
 	pwm_set_clkdiv(slice_num, 125.0f); // 1 kHz frequency
 
 	// Set initial brightness (50% = 500)
@@ -54,28 +55,22 @@ void init_backlight_pwm() {
 }
 void set_brightness_level(uint16_t level) {
 	// level: 0 (off) to 999 (max brightness)
-	uint slice_num = pwm_gpio_to_slice_num(PIN_BL);
 	if(level > 999) level = 999;
-	else if (level < 0) level = 0;
 	pwm_set_gpio_level(PIN_BL, level);
 }
 void set_brightness_percent(uint16_t percent) {
 	if(percent > 100) percent = 100;
-	else if (percent < 0) percent = 0;
 	set_brightness_level((percent * 999) / 100);
 }
 
-void init_control_pins_as_GPIO() {
-	// Initialize CS (Chip Select)
-	init_pin(PIN_TFT_CS, GPIO_OUT, 1); // Start HIGH (not selected)
-	// Initialize DC (Data/Command)
-	init_pin(PIN_DC, GPIO_OUT, 0);
-	// Initialize RESET
-	init_pin(PIN_RESET, GPIO_OUT, 1); // Start HIGH (not in reset)
-	// Initialize Backlight
+void init_display_pins() {
+	// Control pins as GPIO
+	init_pin(PIN_TFT_CS, GPIO_OUT, 1);  // Initialize CS (Chip Select) Start HIGH (not selected)
+	init_pin(PIN_DC, GPIO_OUT, 0);     // Initialize DC (Data/Command)
+	init_pin(PIN_RESET, GPIO_OUT, 1); // Initialize RESET - Start HIGH (not in reset)
+
+	// Backlight as PWM
 	init_backlight_pwm();
-	sleep_ms(2000);
-	set_brightness_level(250);
 }
 
 // Hardware reset sequence
@@ -90,10 +85,9 @@ void reset_display() {
 void init_display(){
 	init_SPI_bus();
 	init_SPI_pins();
-	init_control_pins_as_GPIO();
+	init_display_pins(); // CS, DC, RESET as GPIO
 	reset_display();
 	init_display_commands();
-
 	color_test1();
 	sleep_ms(1000);
 	color_test2();
