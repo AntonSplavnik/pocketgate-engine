@@ -7,9 +7,6 @@
 #include "spi.h"
 #include "display.h"
 
-const uint16_t DISPLAY_WIDTH = SCREEN_WIDTH;
-const uint16_t DISPLAY_HEIGHT = SCREEN_HEIGHT;
-
 // Low-level SPI communication helpers
 void send_command(uint8_t cmd) {
 	gpio_put(PIN_TFT_CS, 0);

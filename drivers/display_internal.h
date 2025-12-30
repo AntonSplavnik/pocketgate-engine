@@ -9,7 +9,5 @@ void send_data_byte(uint8_t data);
 
 void init_display_commands();
 void display_toggle_test();
-void color_test();
-void framebuffer_test();
 
 #endif

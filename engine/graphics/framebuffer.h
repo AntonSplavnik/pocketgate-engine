@@ -4,10 +4,15 @@
 #include "display.h"
 
 namespace Framebuffer {
-	static uint16_t framebuffer[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+	static uint16_t framebuffer_0[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+	static uint16_t framebuffer_1[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+
+	static uint16_t* front_buffer = framebuffer_0;
+	static uint16_t* back_buffer = framebuffer_1;
 
 	void init();
-	void clear();
+	void swap_buffers();
+	void fill_with_color(uint16_t color);
 	void set_pixel(uint16_t x, uint16_t y, uint16_t color);
 	void send_to_display();
 };

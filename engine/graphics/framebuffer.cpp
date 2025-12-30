@@ -4,39 +4,44 @@
 #include "display.h"
 #include "framebuffer.h"
 
-void init() {
-	clear(0x0000);
+void Framebuffer::init() {
+
+	fill_with_color(0x0000);
+	Framebuffer::send_to_display();
 }
-void clear(uint16_t color) {
-	for (size_t i = 0; i < DISPLAY_HEIGHT * DISPLAY_WIDTH; i++)
+
+void Framebuffer::swap_buffers() {
+
+	uint16_t* buffer = front_buffer;
+	front_buffer = back_buffer;
+	back_buffer = buffer;
+}
+
+void Framebuffer::fill_with_color(uint16_t color) {
+
+	for (size_t i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++)
 	{
-		Framebuffer::framebuffer[i] = color;
-	}
-
-}
-void fill_framebuffer(uint16_t* framebuffer, uint16_t buffer_size, uint16_t color) {
-	for (size_t i = 0; i < buffer_size; i++)
-	{
-		framebuffer[i] = color;
-		framebuffer[i] = (color << 8) | (color >> 8);
+		Framebuffer::back_buffer[i] = (color << 8) | (color >> 8);
 	}
 }
 
-void set_pixel(uint16_t x, uint16_t y, uint16_t color) {
-	if(x >= 128 || y >= 160) return;
-	framebuffer[y * DISPLAY_WIDTH + x] = color;
+void Framebuffer::set_pixel(uint16_t x, uint16_t y, uint16_t color) {
+
+	if(x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT) return;
+	back_buffer[y * DISPLAY_WIDTH + x] = (color << 8) | (color >> 8);
 }
 
-void framebuffer_test() {
-	set_window(0, 0, 127, 159);
-	uint16_t buffer_size = DISPLAY_HEIGHT * DISPLAY_WIDTH;
-	uint16_t* framebuffer = new uint16_t[buffer_size];
-	fill_framebuffer(framebuffer, buffer_size, 0xF800);
-	send_data((uint8_t*)framebuffer, buffer_size * 2);
+void Framebuffer::send_to_display() {
+
+	set_window(0, 0, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 1);
+	uint16_t buffer_size = DISPLAY_WIDTH * DISPLAY_HEIGHT;
+	send_data((uint8_t*)front_buffer, buffer_size * 2);
 }
 
-void color_test() {
-	set_window(0, 0, 127, 159);  // Full screen
+
+
+void color_test_nobuffer() {
+	set_window(0, 0, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 1);  // Full screen
 
 	// Black
 	for (int i = 0; i < 20480; i++) {
@@ -47,8 +52,8 @@ void color_test() {
 
 	// White
 	for (int i = 0; i < 20480; i++) {
-	send_data_byte(0xFF);
-	send_data_byte(0xFF);
+		send_data_byte(0xFF);
+		send_data_byte(0xFF);
 	}
 	sleep_ms(5000);
 

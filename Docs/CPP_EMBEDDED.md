@@ -1,7 +1,94 @@
 # C++ for Embedded Systems
 
 ## Table of Contents
+- [Memory Storage: Flash vs RAM](#memory-storage-flash-vs-ram)
 - [Random Number Generation](#random-number-generation)
+
+---
+
+## Memory Storage: Flash vs RAM
+
+### The `const` Keyword in Embedded
+
+**Critical rule:** Use `const` for read-only data to save RAM.
+
+```cpp
+// ❌ BAD - Stored in RAM (wastes precious 264KB)
+static NamedColor COLORS[] = {
+    {"RED", 0xF800},
+    {"GREEN", 0x07E0}
+};
+
+// ✅ GOOD - Stored in Flash (2MB available)
+static const NamedColor COLORS[] = {
+    {"RED", 0xF800},
+    {"GREEN", 0x07E0}
+};
+```
+
+**Why it matters:**
+- Pico has **264KB RAM** (precious) vs **2MB Flash** (abundant)
+- `const` global data → Compiler puts it in Flash ROM
+- Non-`const` global data → Compiler puts it in RAM
+- Flash is read-only but perfect for constants, lookup tables, assets
+
+---
+
+### Memory Allocation Types
+
+**Three types of allocation (NOT dynamic):**
+
+```cpp
+// 1. FLASH (compile-time, read-only)
+static const uint16_t LOOKUP[] = {1, 2, 3};  // Flash ROM
+
+// 2. RAM - Global/Static (compile-time, read-write)
+static uint16_t framebuffer[20480];  // RAM .bss section
+
+// 3. STACK (automatic, function scope)
+void foo() {
+    uint16_t temp[10];  // Stack, destroyed on return
+}
+
+// HEAP (manual, avoid in embedded)
+uint16_t* ptr = new uint16_t[10];  // ❌ Heap fragmentation risk
+```
+
+**Common misconception:**
+- `[]` syntax **does NOT mean dynamic allocation**
+- Only `new`/`malloc` allocate dynamically (heap)
+- Array size known at compile-time → static allocation
+
+---
+
+### When to Use What
+
+| Data Type | Storage | Use Case |
+|-----------|---------|----------|
+| `const` globals | Flash | Color palettes, tile data, sprites, strings |
+| Non-`const` globals | RAM | Framebuffer, game state |
+| Stack arrays | Stack | Temporary buffers, small scratch space |
+| Heap (`new`/`malloc`) | Heap | ❌ Avoid - fragmentation risk |
+
+**Best practice:** Default to `const` for any data that won't change at runtime.
+
+---
+
+### Why Framebuffer Can't Use Flash
+
+```cpp
+// ❌ IMPOSSIBLE - Flash is read-only hardware
+const uint16_t framebuffer[20480];  // Can't change pixels!
+
+// ✅ REQUIRED - Framebuffer changes 60 times/second
+uint16_t framebuffer[20480];  // RAM
+```
+
+**Flash limitations:**
+- Read-only memory (ROM)
+- Write speed: ~milliseconds (vs <16ms per frame needed)
+- Write endurance: ~10,000 cycles (dies in 3 min at 60 FPS)
+- Only use Flash for immutable data
 
 ---
 

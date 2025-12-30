@@ -2,9 +2,10 @@
 #define DISPLAY_H
 
 #include "stdlib.h"
+#include "hardware_config.h"
 
-extern const uint16_t DISPLAY_HEIGHT;
-extern const uint16_t DISPLAY_WIDTH;
+constexpr uint16_t DISPLAY_HEIGHT = SCREEN_HEIGHT;
+constexpr uint16_t DISPLAY_WIDTH = SCREEN_WIDTH;
 
 void init_display();
 void set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);

@@ -32,7 +32,7 @@
 #define PIN_RESET   26            // Display Reset
 
 // Display settings
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 160
+#define SCREEN_HEIGHT 128
+#define SCREEN_WIDTH 160
 
 #endif

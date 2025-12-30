@@ -16,6 +16,14 @@ add_executable(${PROJECT_NAME}
     drivers/spi.cpp
     drivers/display.cpp
     drivers/st7735_driver.cpp
+    engine/graphics/framebuffer.cpp
+)
+
+# Include directories
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/drivers
+    ${CMAKE_CURRENT_SOURCE_DIR}/engine/graphics
 )
 
 # Link Pico libraries

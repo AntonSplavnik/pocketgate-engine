@@ -262,6 +262,149 @@ send_data_byte(0x3C);  // BPA
 
 ---
 
+## Display Orientation (MADCTL)
+
+The **MADCTL** (Memory Data Access Control) command (0x36) controls how the display maps memory to the screen.
+
+### What is MADCTL?
+
+```cpp
+send_command(ST7735_MADCTL);  // Command: 0x36
+send_data_byte(0x00);         // Data: orientation value
+```
+
+**MADCTL controls:**
+- Screen rotation (0°, 90°, 180°, 270°)
+- RGB/BGR color order
+- Memory scanning direction
+- Row/Column address order
+
+### Important Distinction
+
+- `ST7735_MADCTL = 0x36` → The **COMMAND** code (register address)
+- `0x00`, `0x60`, etc. → The **VALUE** sent to that register
+
+### MADCTL Bit Definitions
+
+Each bit in the data byte controls a specific behavior:
+
+```
+Bit 7 (MY):  Row Address Order    (0=top→bottom, 1=bottom→top)
+Bit 6 (MX):  Column Address Order (0=left→right, 1=right→left)
+Bit 5 (MV):  Row/Column Exchange  (0=normal, 1=swap X↔Y axes)
+Bit 4 (ML):  Vertical Refresh     (0=top→bottom, 1=bottom→top)
+Bit 3 (RGB): Color Order          (0=RGB, 1=BGR)
+Bit 2 (MH):  Horizontal Refresh   (0=left→right, 1=right→left)
+Bits 1-0:    Unused
+```
+
+### Common Rotation Values
+
+```cpp
+// Portrait mode (128×160) - taller than wide
+0x00 = 0b00000000  // 0° rotation (normal)
+0xC0 = 0b11000000  // 180° rotation (upside down)
+
+// Landscape mode (160×128) - wider than tall
+0x60 = 0b01100000  // 90° clockwise rotation
+0xA0 = 0b10100000  // 270° clockwise (90° counter-clockwise)
+```
+
+### Rotation Breakdown
+
+**0x00 (Portrait, 0°)**
+```
+MY=0, MX=0, MV=0
+┌─────┐
+│  ^  │  128 pixels wide
+│  │  │  160 pixels tall
+│  │  │
+└─────┘
+```
+
+**0x60 (Landscape, 90°)**
+```
+MY=0, MX=1, MV=1
+┌──────────┐
+│ ←────    │  160 pixels wide
+└──────────┘  128 pixels tall
+```
+
+**0xC0 (Portrait, 180°)**
+```
+MY=1, MX=1, MV=0
+┌─────┐
+│  │  │  128 pixels wide
+│  │  │  160 pixels tall
+│  ↓  │
+└─────┘
+```
+
+**0xA0 (Landscape, 270°)**
+```
+MY=1, MX=0, MV=1
+┌──────────┐
+│    ────→ │  160 pixels wide
+└──────────┘  128 pixels tall
+```
+
+### Choosing Orientation for Games
+
+**Portrait (128×160) - 0x00**
+- Better for vertical scrolling games
+- More vertical visibility
+- Current default setting
+
+**Landscape (160×128) - 0x60 or 0xA0**
+- Better for isometric games (wider view)
+- More horizontal visibility
+- Typical console orientation
+
+### Changing Orientation Example
+
+To switch from portrait to landscape:
+
+**1. Update MADCTL value:**
+```cpp
+// In st7735_driver.cpp
+send_command(ST7735_MADCTL);
+send_data_byte(0x60);  // Changed from 0x00 to 0x60
+```
+
+**2. Update screen dimensions:**
+```cpp
+// In hardware_config.h
+#define SCREEN_WIDTH  160  // Swapped
+#define SCREEN_HEIGHT 128  // Swapped
+```
+
+**3. Update set_window calls:**
+```cpp
+// Old (portrait):
+set_window(0, 0, 127, 159);  // x: 0-127, y: 0-159
+
+// New (landscape):
+set_window(0, 0, 159, 127);  // x: 0-159, y: 0-127
+```
+
+### Coordinate System Remains Constant
+
+Regardless of rotation, the coordinate system is always:
+- **X axis = horizontal** (left to right) - columns
+- **Y axis = vertical** (top to bottom) - rows
+
+```
+(0,0) ────────────→ X
+  │
+  │
+  ↓
+  Y
+```
+
+MADCTL just changes which physical pixels correspond to which coordinates.
+
+---
+
 ## The Hardware API Analogy
 
 Think of display commands like a **hardware API**:

@@ -21,7 +21,7 @@ void init_display_commands() {
 
 	// Set screen orientation (optional, depends on your physical setup)
 	send_command(ST7735_MADCTL);
-	send_data_byte(0x00);  // 0x00 = normal, or try 0xC0, 0x60, 0xA0 for rotation
+	send_data_byte(0x60);  // 0x00 = normal, or try 0xC0 (90°), 0x60 (180°), 0xA0 (270°) for rotation
 
 	// Set frame rate
 	send_command(ST7735_FRMCTR1);
@@ -38,6 +38,7 @@ void init_display_commands() {
 }
 
 void set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+
 	send_command(ST7735_CASET);
 	send_data_byte(x1 >> 8);
 	send_data_byte(x1 & 0xFF);

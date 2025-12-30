@@ -1,12 +1,13 @@
 #include "pico/stdlib.h"
+#include "pico/time.h"
 #include "hardware/pwm.h"
 #include "hardware/spi.h"
 #include "stdlib.h"
 #include "random"
-#include "drivers/display.h"
-
-#include "pico/time.h"
 #include <math.h>
+
+#include "drivers/display.h"
+#include "framebuffer.h"
 
 const uint LED_PIN = 25;
 const uint LED_L = 28;
@@ -108,11 +109,42 @@ void blik(){
 	}
 }
 
+struct NamedColor {
+	const char* name;
+	uint16_t value;
+};
+
+static const NamedColor COLORS[] = {
+	{"RED",     0xF800},
+	{"GREEN",   0x07E0},
+	{"BLUE",    0x001F},
+	{"WHITE",   0xFFFF},
+	{"BLACK",   0x0000},
+	{"YELLOW",  0xFFE0},
+	{"CYAN",    0x07FF},
+	{"MAGENTA", 0xF81F}
+};
+
+void color_test() {
+
+	Framebuffer::init();
+	sleep_ms(3000);
+
+	for(const auto& color: COLORS) {
+		Framebuffer::fill_with_color(color.value);
+		Framebuffer::swap_buffers();
+		Framebuffer::send_to_display();
+		sleep_ms(3000);
+	}
+
+}
+
 int main(){
 	stdio_init_all();
 	sleep_ms(3000);
 	printf("TriggEngine v0.1\n");
 	init_display();
+	color_test();
 	blik();
 	return 0;
 }

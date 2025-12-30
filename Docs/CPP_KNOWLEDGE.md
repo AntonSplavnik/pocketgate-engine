@@ -1,10 +1,70 @@
 # C++ Knowledge Bank
 
 ## Table of Contents
+- [Compile-Time Constants (constexpr)](#compile-time-constants-constexpr)
 - [Random Number Generation](#random-number-generation)
 - [Smart Pointers](#smart-pointers)
 - [Lambda Functions](#lambda-functions)
 - [Move Semantics](#move-semantics)
+
+---
+
+## Compile-Time Constants (constexpr)
+
+### Why constexpr Matters
+
+**Problem:** C++ requires array sizes to be known at compile-time.
+
+```cpp
+// ❌ Won't compile - runtime constant
+extern const uint16_t WIDTH;
+uint16_t buffer[WIDTH];  // Error: array size must be constant expression
+```
+
+```cpp
+// ✅ Works - compile-time constant
+constexpr uint16_t WIDTH = 160;
+uint16_t buffer[WIDTH];  // OK
+```
+
+### const vs constexpr
+
+**`const` = Runtime constant** (value set once, but at runtime):
+```cpp
+extern const uint16_t DISPLAY_WIDTH;  // Defined elsewhere
+// Compiler doesn't know value until link time
+```
+
+**`constexpr` = Compile-time constant** (value must be known during compilation):
+```cpp
+constexpr uint16_t DISPLAY_WIDTH = 160;  // Value known at compile-time
+// Can be used for array sizes, template parameters, etc.
+```
+
+### Practical Example: Display Constants
+
+**drivers/display.h:**
+```cpp
+#include "hardware_config.h"
+
+// Compile-time constants for engine layer
+constexpr uint16_t DISPLAY_WIDTH = SCREEN_WIDTH;
+constexpr uint16_t DISPLAY_HEIGHT = SCREEN_HEIGHT;
+```
+
+**engine/graphics/framebuffer.h:**
+```cpp
+#include "display.h"
+
+// Now this works - constexpr allows array size
+static uint16_t framebuffer[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+```
+
+### Key Points
+- Use `constexpr` for values needed at compile-time (array sizes, template args)
+- Use `const` for runtime values that shouldn't change
+- `constexpr` implies `const` (all constexpr are const, not vice versa)
+- C++11 constexpr can only contain single return statement
 
 ---
 
