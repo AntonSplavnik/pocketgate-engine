@@ -19,9 +19,9 @@ void Framebuffer::swap_buffers() {
 
 void Framebuffer::fill_with_color(uint16_t color) {
 
-	for (size_t i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++)
-	{
-		Framebuffer::back_buffer[i] = (color << 8) | (color >> 8);
+	uint16_t swapped_color = (color << 8) | (color >> 8);
+	for (size_t i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++) {
+		back_buffer[i] = swapped_color;
 	}
 }
 
@@ -29,6 +29,13 @@ void Framebuffer::set_pixel(uint16_t x, uint16_t y, uint16_t color) {
 
 	if(x >= DISPLAY_WIDTH || y >= DISPLAY_HEIGHT) return;
 	back_buffer[y * DISPLAY_WIDTH + x] = (color << 8) | (color >> 8);
+}
+
+void Framebuffer::draw_line(uint16_t x, uint16_t y, uint16_t line_len, uint16_t color) {
+	uint16_t swapped_color = (color << 8) | (color >> 8);
+	for (size_t i = 0; i < line_len; i++) {
+		Framebuffer::back_buffer[y * DISPLAY_WIDTH + x + i] = swapped_color;
+	}
 }
 
 void Framebuffer::send_to_display() {

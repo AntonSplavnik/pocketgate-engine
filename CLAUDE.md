@@ -51,17 +51,27 @@ project/
 └── assets/      # Tile and sprite data (stored in Flash)
 ```
 
-## Isometric Rendering
-- **Tile dimensions**: 32×16 pixels (diamond shape)
-- **Coordinate conversion**:
-  - `screen_x = (world_x - world_y) * tile_width/2`
-  - `screen_y = (world_x + world_y) * tile_height/2`
-- **Render order**: Back-to-front (top-left to bottom-right)
-- **Depth sorting**: Sort entities by `(x + y)` value
+## Game Architecture
+**Sprite-based isometric rendering** (like Fallout 1, GBA LOTR: Two Towers):
+- **NOT pure tile-based** - characters and objects are sprites with free movement
+- Pre-rendered sprite sheets for characters/objects
+- Background may use tiles internally for efficiency, but rendered seamlessly
+- Camera/viewport system following player
+- Layered sprite rendering with depth sorting
+
+## Rendering System
+- **Double buffering**: Two 40KB framebuffers with pointer swapping
+- **Sprite rendering**: Batch operations (memcpy, direct buffer writes)
+- **Avoid individual pixel operations**: Never use set_pixel() for bulk drawing
+- **Depth sorting**: Sort sprites by Y-position (back-to-front)
+- **Coordinate system**: Isometric world coordinates → screen coordinates
+- **Transparency**: Support transparent pixels in sprites
+- **Camera**: Scrolling viewport with world-to-screen coordinate conversion
 
 ## Performance Targets
-- 60 FPS with 10×10 visible tiles
-- 10-20 entities on screen
+- **60 FPS sustained**
+- 10-20 sprites on screen (~5,000 pixels/frame)
+- Double buffering: render to back buffer, swap, send to display
+- Frame budget: 16.67ms (clear + render + send)
+- Optimize batch operations over individual pixel writes
 - Input latency < 16ms
-- Use dirty rectangle tracking for optimization
-- DMA for SPI transfers (non-blocking)

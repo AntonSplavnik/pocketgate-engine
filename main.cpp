@@ -14,9 +14,12 @@ const uint LED_L = 28;
 const uint LED_R = 4;
 
 static std::mt19937 rng(time_us_32());
-int randomInt(int min, int max) {
+int random_int_distr(int min, int max) {
 	std::uniform_int_distribution<int> dist(min, max);
 	return dist(rng);
+}
+int random_int_modulo(int min, int max) {
+	return min + (rng() % (max - min + 1));
 }
 
 void init_led_pwm(uint pin) {
@@ -139,12 +142,65 @@ void color_test() {
 
 }
 
+void fps_counter() {
+
+	static uint32_t frame_count = 0;
+	static uint64_t last_frame_time = time_us_64();
+
+	frame_count++;
+
+	uint64_t elapsed_time = time_us_64() - last_frame_time;
+	if(elapsed_time >= 1000000) {
+		printf("FPS: %lu\n", frame_count);
+		frame_count = 0;
+		last_frame_time = time_us_64();
+	}
+}
+
+void random_pixels_test() {
+	while(true) {
+		Framebuffer::fill_with_color(0x0000);  // Black background
+		// Draw complex scene to back buffer
+		for(int i = 0; i < 5000; i++) {
+			Framebuffer::set_pixel(random_int_modulo(0, 160), random_int_modulo(0, 128), COLORS[random_int_modulo(5, 7)].value);
+		}
+
+		fps_counter();
+
+		Framebuffer::swap_buffers();
+		Framebuffer::send_to_display();
+		// No sleep - immediate next frame!
+	}
+}
+void line_test(){
+	Framebuffer::fill_with_color(0x0000);
+	Framebuffer::draw_line(50, 50, 50, 0xFFE0);
+	Framebuffer::swap_buffers();
+	Framebuffer::send_to_display();
+}
+
+void rectangle_test(uint16_t start_raw_y, uint16_t number_of_raws_y, uint16_t x, uint16_t line_len, uint16_t color){
+	if(start_raw_y > SCREEN_HEIGHT - 1) start_raw_y = SCREEN_HEIGHT - 1;
+	if(number_of_raws_y > SCREEN_HEIGHT - 1) number_of_raws_y = SCREEN_HEIGHT - 1;
+
+	Framebuffer::fill_with_color(0x0000);
+	for (size_t y = start_raw_y; y < start_raw_y+number_of_raws_y; y++)
+	{
+		Framebuffer::draw_line(x, y, line_len, color);
+	}
+	Framebuffer::swap_buffers();
+	Framebuffer::send_to_display();
+}
+
 int main(){
 	stdio_init_all();
 	sleep_ms(3000);
 	printf("TriggEngine v0.1\n");
 	init_display();
-	color_test();
+	// random_pixels_test();
+	// line_test();
+	rectangle_test(128/2 - 25/2, 25, 160/2 - 25/2, 25, 0xFFE0);
+	// color_test();
 	blik();
 	return 0;
 }
