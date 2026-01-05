@@ -66,6 +66,93 @@ This document outlines potential hardware upgrades for the TriggEngine console t
 - More Flash memory for higher-res assets
 - Pico 2's extra RAM makes this feasible
 
+### 2.1 Understanding Display Resolution & PPI
+
+#### What is PPI?
+**PPI (Pixels Per Inch)** is the relationship between resolution and physical display size:
+```
+PPI = diagonal_in_pixels / diagonal_in_inches
+```
+
+- **Higher PPI** = More pixels packed per inch = Smaller individual pixels
+- **Lower PPI** = Fewer pixels per inch = Larger individual pixels
+- **PPI varies between display models** - it's NOT standardized
+
+#### Current Display Analysis
+**ST7735 128×160 (1.8" diagonal)**:
+- Resolution: 128×160 pixels
+- PPI ≈ 114
+- Framebuffer: 40KB (128×160×2 bytes)
+- Physical pixel size: ~0.22mm
+
+#### Common Upgrade Options with PPI Analysis
+
+| Display | Size | Resolution | PPI | Framebuffer | Physical Pixel Size |
+|---------|------|------------|-----|-------------|-------------------|
+| ST7735 (current) | 1.8" | 128×160 | ~114 | 40KB | ~0.22mm |
+| ST7789 | 2.4" | 240×240 | ~141 | 115KB | ~0.18mm |
+| ST7789 | 1.54" | 240×240 | ~220 | 115KB | ~0.12mm |
+| ILI9341 | 2.4" | 240×320 | ~167 | 154KB | ~0.15mm |
+| ILI9341 | 2.8" | 240×320 | ~143 | 154KB | ~0.18mm |
+| ST7789 | 4.0" | 320×240 | ~100 | 154KB | ~0.25mm |
+| Higher-res | 4.0" | 480×320 | ~144 | 307KB | ~0.18mm |
+
+#### How Display Upgrades Affect Sprites
+
+When upgrading displays, **two independent factors** affect how sprites appear:
+
+**Factor 1: Resolution Change (View Area)**
+- Higher resolution = More pixels = Larger view area
+- A 16×16 pixel sprite remains 16×16 pixels
+- You see **more of the game world** (camera shows larger area)
+
+**Factor 2: Physical Size Change (Sprite Physical Size)**
+- Larger physical display = Bigger pixels (usually)
+- Same 16×16 sprite appears **physically larger or smaller** depending on PPI
+- Lower PPI = sprite is physically bigger and easier to see
+- Higher PPI = sprite is physically smaller but sharper
+
+#### Practical Examples
+
+**Example 1: Upgrade to 4" Display (320×240)**
+- Resolution increases: 128×160 → 320×240 (2.5× width, 1.5× height)
+- View area: See ~2.5× more horizontally, 1.5× more vertically
+- PPI decreases: ~114 → ~100 (pixels get bigger)
+- **Result**: More view area + sprites are physically comfortable to see
+
+**Example 2: Upgrade to 2.4" Display (240×320)**
+- Resolution increases: 128×160 → 240×320 (1.9× both dimensions)
+- View area: See ~1.9× more of the game world
+- PPI increases: ~114 → ~167 (pixels get smaller)
+- **Result**: More view area but sprites are physically smaller (sharper, more detailed)
+
+#### Choosing the Right Display
+
+**For comfortable gameplay without scaling sprites:**
+- Target PPI: 80-130 (similar to current display)
+- Recommended: 2.4"-4.0" displays with 240×240 or 320×240 resolution
+- These provide more view area while keeping sprites physically visible
+
+**For maximum detail (may need larger sprites):**
+- Higher PPI displays (150+) provide sharper graphics
+- May require upscaling sprites or creating higher-resolution assets
+- Better for displays with more RAM budget
+
+#### Memory Constraints
+
+**Framebuffer Memory = Width × Height × 2 bytes (RGB565)**
+
+On Raspberry Pi Pico (264KB RAM):
+- 128×160: 40KB (double buffered: 80KB) ✓ Current
+- 240×240: 115KB (double buffered: 230KB) ⚠️ Tight on Pico 1
+- 320×240: 154KB (double buffered: 308KB) ✗ Exceeds Pico 1 RAM
+
+On Raspberry Pi Pico 2 (520KB RAM):
+- 240×320: 154KB (double buffered: 308KB) ✓ Comfortable
+- 480×320: 307KB (double buffered: 614KB) ✗ Too large even for Pico 2
+
+**Practical Limit**: 320×240 is near maximum for double buffering on Pico 2
+
 ---
 
 ## 3. Input System Upgrades

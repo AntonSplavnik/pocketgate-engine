@@ -199,13 +199,6 @@ struct Rectangle {
 	uint16_t color;
 };
 
-enum Movement {
-	up,
-	down,
-	left,
-	right
-};
-
 void performe_button_action(ButtonState state, Rectangle& rect) {
 
 	if(state.w && rect.y > 0) rect.y -= 1;
@@ -214,7 +207,7 @@ void performe_button_action(ButtonState state, Rectangle& rect) {
 	if(state.d && rect.x + rect.width < SCREEN_WIDTH) rect.x += 1;
 }
 
-void movement_tracking_test() {
+void movement_tracking_test_regular() {
 
 	Rectangle rect = {128/2 - 25/2, 25, 160/2 - 25/2, 25, 0xFFE0};
 	fill_with_color(0x0000);
@@ -223,16 +216,57 @@ void movement_tracking_test() {
 	send_to_display();
 
 	ButtonState buttons;
+	ButtonState buttons_old_pos;
 	while (true)
 	{
 		buttons = button_polling();
 		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
 			fill_with_color(0x0000);
 			performe_button_action(buttons, rect);
 			draw_rectangle_memset(rect.y, rect.height, rect.x, rect.width, rect.color);
 			fps_counter();
 			swap_buffers();
 			send_to_display();
+		}
+	}
+}
+
+void movement_tracking_test_polac() {
+
+	Rectangle rect = {128/2 - 25/2, 25, 160/2 - 25/2, 25, 0xFFE0};
+	fill_with_color(0x0000);
+	for(int i = 0; i < 3536; i++) {
+		set_pixel(random_int_modulo(rect.x, rect.x + rect.width), random_int_modulo(rect.y, rect.y + rect.height), COLORS[random_int_modulo(5, 7)].value);
+	}
+	swap_buffers();
+	send_to_display();
+
+	ButtonState buttons;
+	ButtonState buttons_old_pos;
+	while (true)
+	{
+		buttons = button_polling();
+		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
+			fill_with_color(0x0000);
+			performe_button_action(buttons, rect);
+			for(int i = 0; i < 3536; i++) {
+				set_pixel(random_int_modulo(rect.x, rect.x + rect.width), random_int_modulo(rect.y, rect.y + rect.height), COLORS[random_int_modulo(5, 7)].value);
+			}
+			fps_counter();
+			swap_buffers();
+			send_to_display();
+		}
+		else {
+			sleep_ms(1);
+			fill_with_color(0x0000);
+			for(int i = 0; i < 3536; i++) {
+				set_pixel(random_int_modulo(rect.x, rect.x + rect.width), random_int_modulo(rect.y, rect.y + rect.height), COLORS[random_int_modulo(5, 7)].value);
+			}
+			swap_buffers();
+			send_to_display();
+			fps_counter();
 		}
 	}
 }
@@ -251,7 +285,7 @@ int main(){
 	// random_pixels_test();
 	// line_test();
 	// rectangle_test();
-	movement_tracking_test();
+	movement_tracking_test_polac();
 	blik();
 
 	return 0;
