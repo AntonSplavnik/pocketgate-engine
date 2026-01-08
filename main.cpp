@@ -11,7 +11,6 @@
 #include "drivers/display.h"
 #include "framebuffer.h"
 #include "buttons.h"
-#include "assets/skeleton.h"
 #include "assets/skeleton_alpha.h"
 
 using namespace Framebuffer;
@@ -332,6 +331,8 @@ void sprite_test() {
 	fill_with_color(COLORS[3].value);
 	// draw_sprite(128/2 - 25/2, 43, 160/2 - 25/2, 59, skeleton_data);
 	draw_sprite_alpha(128/2 - 25/2, skeleton_alpha_height, 160/2 - 25/2, skeleton_alpha_width, skeleton_alpha_data);
+	draw_sprite_alpha(2, skeleton_alpha_height, 20, skeleton_alpha_width, skeleton_alpha_data);
+	// draw_sprite_alpha(128 - skeleton_alpha_height, skeleton_alpha_height, 160 - skeleton_alpha_width, skeleton_alpha_width, skeleton_alpha_data);
 	swap_buffers();
 	send_to_display();
 }

@@ -132,24 +132,25 @@ void Framebuffer::draw_sprite_alpha(uint16_t y, uint16_t height, uint16_t x, uin
 
 			size_t buffer_index = i * DISPLAY_WIDTH + x + j;
 
-			// Full opaque - just write directly (with byte swap)
+			// Full opaque - just write directly (pre-swapped in .h file)
 			if (pixel.alpha == 255) {
-				back_buffer[buffer_index] = (pixel.color << 8) | (pixel.color >> 8);
+				back_buffer[buffer_index] = pixel.color;
 				continue;
 			}
 
 			// Alpha blending required
-			uint16_t bg_swapped = back_buffer[buffer_index];
-			uint16_t bg = (bg_swapped << 8) | (bg_swapped >> 8);  // Un-swap background
+			// Un-swap to little-endian for RGB extraction
+			uint16_t sprite_rgb = (pixel.color << 8) | (pixel.color >> 8);
+			uint16_t bg_rgb = (back_buffer[buffer_index] << 8) | (back_buffer[buffer_index] >> 8);
 
-			// Extract RGB components (sprite and background)
-			uint8_t sr = (pixel.color >> 11) & 0x1F;
-			uint8_t sg = (pixel.color >> 5) & 0x3F;
-			uint8_t sb = pixel.color & 0x1F;
+			// Extract RGB components (from little-endian RGB565)
+			uint8_t sr = (sprite_rgb >> 11) & 0x1F;
+			uint8_t sg = (sprite_rgb >> 5) & 0x3F;
+			uint8_t sb = sprite_rgb & 0x1F;
 
-			uint8_t br = (bg >> 11) & 0x1F;
-			uint8_t bg_g = (bg >> 5) & 0x3F;
-			uint8_t bb = bg & 0x1F;
+			uint8_t br = (bg_rgb >> 11) & 0x1F;
+			uint8_t bg_g = (bg_rgb >> 5) & 0x3F;
+			uint8_t bb = bg_rgb & 0x1F;
 
 			// Blend: result = (sprite * alpha + bg * (255 - alpha)) / 255
 			uint8_t inv_alpha = 255 - pixel.alpha;
@@ -157,7 +158,7 @@ void Framebuffer::draw_sprite_alpha(uint16_t y, uint16_t height, uint16_t x, uin
 			uint8_t g = (sg * pixel.alpha + bg_g * inv_alpha) / 255;
 			uint8_t b = (sb * pixel.alpha + bb * inv_alpha) / 255;
 
-			// Pack to RGB565 and swap bytes for display
+			// Pack to RGB565 and swap to big-endian for buffer
 			uint16_t blended = (r << 11) | (g << 5) | b;
 			back_buffer[buffer_index] = (blended << 8) | (blended >> 8);
 		}

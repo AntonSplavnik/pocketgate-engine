@@ -28,8 +28,8 @@ def convert_sprite_to_cpp(input_file, output_file, width, height, sprite_name):
     pixels = []
     for i in range(num_pixels):
         offset = i * 3
-        # Read RGB565 (2 bytes, little-endian) and alpha (1 byte)
-        rgb565 = struct.unpack('<H', data[offset:offset+2])[0]
+        # Read RGB565 as BIG-ENDIAN (swaps bytes at build time, not runtime)
+        rgb565 = struct.unpack('>H', data[offset:offset+2])[0]
         alpha = data[offset+2]
         pixels.append((rgb565, alpha))
 
