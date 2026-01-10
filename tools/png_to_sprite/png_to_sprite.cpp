@@ -1,6 +1,6 @@
-  // tools/png_to_sprite_alpha.cpp - RGB565 + Alpha8 format
+  // tools/png_to_sprite.cpp
   #define STB_IMAGE_IMPLEMENTATION
-  #include "stb_image.h"
+  #include "../stb_image.h"
   #include <fstream>
   #include <iostream>
   #include <cstdint>
@@ -26,10 +26,10 @@
           return false;
       }
 
-      std::cout << "Converting (RGB565+Alpha8): " << input_png << std::endl;
+      std::cout << "Converting: " << input_png << std::endl;
       std::cout << "  Dimensions: " << width << "x" << height << std::endl;
       std::cout << "  Pixels: " << (width * height) << std::endl;
-      std::cout << "  Size: " << (4 + width * height * 3) << " bytes (3 bytes/pixel)" << std::endl;
+      std::cout << "  Size: " << (4 + width * height * 2) << " bytes" << std::endl;
 
       // Open output file (binary mode)
       std::ofstream out(output_sprite, std::ios::binary);
@@ -45,7 +45,7 @@
       out.write(reinterpret_cast<const char*>(&w), sizeof(uint16_t));
       out.write(reinterpret_cast<const char*>(&h), sizeof(uint16_t));
 
-      // Convert and write pixel data (RGB565 + Alpha8 = 3 bytes per pixel)
+      // Convert and write pixel data
       int transparent_count = 0;
       for (int y = 0; y < height; y++) {
           for (int x = 0; x < width; x++) {
@@ -55,15 +55,16 @@
               uint8_t b = img[index + 2];
               uint8_t a = img[index + 3];
 
-              uint16_t rgb565 = rgb_to_rgb565(r, g, b);
-
-              if (a < 10) {
+              uint16_t rgb565;
+              if (a < 10) {  // Transparent pixel (very low alpha)
+                  rgb565 = 0xF81F;  // Magenta (transparency magic color)
                   transparent_count++;
+              } else {
+                  rgb565 = rgb_to_rgb565(r, g, b);
               }
 
-              // Write RGB565 (2 bytes) + alpha (1 byte) = 3 bytes total
+              // Write as little-endian uint16_t
               out.write(reinterpret_cast<const char*>(&rgb565), sizeof(uint16_t));
-              out.write(reinterpret_cast<const char*>(&a), sizeof(uint8_t));
           }
       }
 
@@ -77,14 +78,15 @@
 
   int main(int argc, char** argv) {
       if (argc < 2) {
-          std::cout << "PNG to Binary Sprite Converter (Alpha Blending) for TriggEngine\n";
+          std::cout << "PNG to Binary Sprite Converter for TriggEngine\n";
           std::cout << "Usage:\n";
           std::cout << "  " << argv[0] << " <input.png> [output.sprite]\n";
+          std::cout << "  " << argv[0] << " <directory>  (batch convert)\n";
           std::cout << "\nOutput format:\n";
           std::cout << "  - Width: uint16_t (2 bytes)\n";
           std::cout << "  - Height: uint16_t (2 bytes)\n";
-          std::cout << "  - Pixels: RGB565 (2 bytes) + Alpha8 (1 byte) = 3 bytes per pixel\n";
-          std::cout << "  - Supports full alpha blending (0-255)\n";
+          std::cout << "  - Pixels: RGB565 array (width × height × 2 bytes)\n";
+          std::cout << "  - Transparency: Alpha < 128 → 0xF81F (magenta)\n";
           return 1;
       }
 

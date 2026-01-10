@@ -12,6 +12,7 @@
 #include "framebuffer.h"
 #include "buttons.h"
 #include "assets/skeleton_alpha.h"
+#include "assets/wizard.h"
 
 using namespace Framebuffer;
 using namespace Buttons;
@@ -272,18 +273,11 @@ void movement_tracking_test_polac() {
 	}
 }
 
-struct Rectangel {
-	uint16_t y;
-	uint16_t height;
-	uint16_t x;
-	uint16_t width;
-};
+void movement_tracking_test_sprite_skeleton() {
 
-void movement_tracking_test_sprite() {
-
-	Rectangle sprite_coord = {128/2 - 25/2, skeleton_alpha_height, 160/2 - 25/2, skeleton_alpha_width};
+	Rectangle sprite_coord = {128/2 - skeleton_alpha_height/2, skeleton_alpha_height, 160/2 - skeleton_alpha_width/2, skeleton_alpha_width};
 	fill_with_color(COLORS[3].value);
-	draw_sprite_alpha(128/2 - 25/2, skeleton_alpha_height, 160/2 - 25/2, skeleton_alpha_width, skeleton_alpha_data);
+	draw_sprite_alpha(128/2 - skeleton_alpha_height/2, skeleton_alpha_height, 160/2 - skeleton_alpha_width/2, skeleton_alpha_width, skeleton_alpha_data);
 	swap_buffers();
 	send_to_display();
 
@@ -302,15 +296,40 @@ void movement_tracking_test_sprite() {
 		}
 	}
 }
+void movement_tracking_test_sprite_wizard() {
+
+	Rectangle sprite_coord = {128/2 - wizard_height/2, wizard_height, 160/2 - wizard_width/2, wizard_width};
+	fill_with_color(COLORS[3].value);
+	draw_sprite_alpha(128/2 - wizard_height/2, wizard_height, 160/2 - wizard_width/2, wizard_width, wizard_data);
+	swap_buffers();
+	send_to_display();
+
+	ButtonState buttons;
+	while (true)
+	{
+		buttons = button_polling();
+		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
+			fill_with_color(COLORS[3].value);
+			performe_button_action(buttons, sprite_coord);
+			draw_sprite_alpha(sprite_coord.y, sprite_coord.height, sprite_coord.x, sprite_coord.width, wizard_data);
+			fps_counter();
+			swap_buffers();
+			send_to_display();
+		}
+	}
+}
 
 void sprite_test() {
-	// sprite is converter to bite date with correct collor for transperant color and swapped endiannes saved on sd card
-	// open file with ifstream constructor late can read all files in directory.
-	// allocate memory for file len (dimentions * color size(16bit))
-	// read file to the pointer
-	// draw sprite in buffer
-	// swap buffers
-	// send to display
+/*
+	sprite is converter to bite date with correct collor for transperant color and swapped endiannes saved on sd card
+	open file with ifstream constructor late can read all files in directory.
+	allocate memory for file len (dimentions * color size(16bit))
+	read file to the pointer
+	draw sprite in buffer
+	swap buffers
+	send to display
+*/
 
 	// std::ifstream file("/assets/skeleton.sprite", std::ios::binary);
 	// if(!file.is_open()) {
@@ -330,9 +349,15 @@ void sprite_test() {
 
 	fill_with_color(COLORS[3].value);
 	// draw_sprite(128/2 - 25/2, 43, 160/2 - 25/2, 59, skeleton_data);
-	draw_sprite_alpha(128/2 - 25/2, skeleton_alpha_height, 160/2 - 25/2, skeleton_alpha_width, skeleton_alpha_data);
-	draw_sprite_alpha(2, skeleton_alpha_height, 20, skeleton_alpha_width, skeleton_alpha_data);
-	// draw_sprite_alpha(128 - skeleton_alpha_height, skeleton_alpha_height, 160 - skeleton_alpha_width, skeleton_alpha_width, skeleton_alpha_data);
+
+	draw_sprite_alpha(2, skeleton_alpha_height, 2, skeleton_alpha_width, skeleton_alpha_data);
+	draw_sprite_alpha(2, skeleton_alpha_height, 160 - skeleton_alpha_width, skeleton_alpha_width, skeleton_alpha_data);
+
+	draw_sprite_alpha(128/2 - skeleton_alpha_height/2, skeleton_alpha_height, 160/2 - skeleton_alpha_width/2, skeleton_alpha_width, skeleton_alpha_data);
+
+	draw_sprite_alpha(128 - skeleton_alpha_height, skeleton_alpha_height, 2, skeleton_alpha_width, skeleton_alpha_data);
+	draw_sprite_alpha(128 - skeleton_alpha_height, skeleton_alpha_height, 160 - skeleton_alpha_width, skeleton_alpha_width, skeleton_alpha_data);
+
 	swap_buffers();
 	send_to_display();
 }
@@ -345,7 +370,7 @@ int main(){
 	printf("TriggEngine v0.1\n");
 
 	init_display();
-	init_buttons_pins();
+	init_buttons();
 
 	// color_test();
 	// random_pixels_test();
@@ -353,7 +378,7 @@ int main(){
 	// rectangle_test();
 	// movement_tracking_test_polac();
 	// sprite_test();
-	movement_tracking_test_sprite();
+	movement_tracking_test_sprite_wizard();
 	blik();
 
 	return 0;

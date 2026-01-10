@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sprite Preview</title>
+    <style>
+        body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { border: 2px solid #fff; image-rendering: pixelated; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="128" height="160"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        // CONFIGURE THESE:
+        const frameWidth = 128;   // Width of one frame in pixels (1920/15 = 128)
+        const frameHeight = 128;  // Height of one frame in pixels (1024/8 = 128)
+        const framesPerRow = 15;  // How many frames across (15 animation frames)
+        const totalFrames = 15;   // Total animation frames per direction
+        const direction = 0;      // Which direction to show (0-7: 0=front, 1-7=other angles)
+        const fps = 15;           // Animation speed
+
+        // Crop settings to remove empty space around character
+        const cropX = 20;         // Pixels to crop from left (adjust to remove gray space)
+        const cropY = 15;         // Pixels to crop from top
+        const cropWidth = 100;     // Width after cropping (128 - cropX - right margin)
+        const cropHeight = 98;    // Height after cropping (128 - cropY - bottom margin)
+        const scale = 1.2;        // Scale factor - can be higher now that we're cropping
+
+        let currentFrame = 0;
+
+        // Show loading message
+        ctx.fillStyle = 'white';
+        ctx.font = '14px monospace';
+        ctx.fillText('Loading...', 40, 80);
+        console.log('Starting to load image...');
+
+        img.onload = () => {
+            console.log('Image loaded successfully!', img.width, 'x', img.height);
+
+            // Start animation immediately
+            setInterval(() => {
+                // Fill background with gray to see transparent sprites
+                ctx.fillStyle = '#444';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                const col = currentFrame % framesPerRow;  // Which frame in the animation
+                const row = direction;                    // Which direction (0-7)
+
+                // Calculate source position with crop offset
+                const sourceX = col * frameWidth + cropX;
+                const sourceY = row * frameHeight + cropY;
+
+                // Scale the cropped area
+                const drawWidth = cropWidth * scale;
+                const drawHeight = cropHeight * scale;
+                const drawX = (canvas.width - drawWidth) / 2;
+                const drawY = (canvas.height - drawHeight) / 2;
+
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY,                     // Source position with crop offset
+                    cropWidth, cropHeight,                // Source size (cropped)
+                    drawX, drawY,                         // Destination position (centered)
+                    drawWidth, drawHeight                 // Destination size (scaled to fit)
+                );
+
+                currentFrame = (currentFrame + 1) % totalFrames;
+            }, 1000 / fps);
+        };
+
+        img.onerror = (e) => {
+            console.error('Image failed to load!', e);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'red';
+            ctx.font = '14px monospace';
+            ctx.fillText('ERROR!', 40, 60);
+            ctx.fillStyle = 'white';
+            ctx.font = '10px monospace';
+            ctx.fillText('Image failed to load', 10, 80);
+            ctx.fillText('Check browser console', 10, 95);
+        };
+
+        // CHANGE THIS to your PNG filename (try: Run.png, Walk.png, Idle.png, Melee.png, Kick.png, Die.png, etc.):
+        const animations = {
+            castSpell: '2D HD Character Knight/Spritesheets/With shadows/CastSpell.png',
+            run: '2D HD Character Knight/Spritesheets/With shadows/Run.png',
+            walk: '2D HD Character Knight/Spritesheets/With shadows/Walk.png',
+            idle: '2D HD Character Knight/Spritesheets/With shadows/Idle.png',
+            melee: '2D HD Character Knight/Spritesheets/With shadows/Melee.png',
+            kick: '2D HD Character Knight/Spritesheets/With shadows/Kick.png',
+            die: '2D HD Character Knight/Spritesheets/With shadows/Die.png',
+            turn: '2D HD Character Knight/Spritesheets/With shadows/180Turn.png'
+        };
+
+        const imgPath = animations.castSpell;  // Change to: animations.run, animations.walk, etc.
+        console.log('Loading:', imgPath);
+        img.src = imgPath;
+    </script>
+</body>
+</html>

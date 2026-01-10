@@ -8,7 +8,7 @@ void init_button(int pin, enum gpio_dir gpio) {
 	gpio_pull_up(pin);
 }
 
-void Buttons::init_buttons_pins() {
+void Buttons::init_buttons() {
 
 	// Left side (wasd)
 	init_button(BTN_W, GPIO_IN);

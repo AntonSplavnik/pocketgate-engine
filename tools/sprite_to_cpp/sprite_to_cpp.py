@@ -25,7 +25,7 @@ def convert_sprite_to_cpp(input_file, output_file, width, height, sprite_name):
 
     # Convert to uint16_t values
     num_pixels = actual_size // 2
-    pixels = struct.unpack(f'>{num_pixels}H', data[:num_pixels * 2])
+    pixels = struct.unpack(f'<{num_pixels}H', data[:num_pixels * 2])
 
     # Generate C++ header file
     with open(output_file, 'w') as f:

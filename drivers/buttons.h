@@ -8,7 +8,7 @@ struct ButtonState {
 
 namespace Buttons {
 
-	void init_buttons_pins();
+	void init_buttons();
 	ButtonState button_polling();
 }
 
