@@ -1,16 +1,32 @@
 
-#include "pico/stdlib.h"
-#include "stdio.h"
-#include "cstring"
+#ifdef PLATFORM_DESKTOP
+    #include <cstdint>
+    #include <cstdio>
+    #include <cstring>
+    #include <cstdlib>
+#else
+    #include "pico/stdlib.h"
+    #include "stdio.h"
+    #include "cstring"
+    #include "st7735_driver.h"
+    #include "display.h"
+#endif
 
-#include "st7735_driver.h"
-#include "display.h"
 #include "framebuffer.h"
 
-// Endian helpers
+// Buffer definitions (shared across all files)
+uint16_t Framebuffer::framebuffer_0[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+uint16_t Framebuffer::framebuffer_1[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+uint16_t* Framebuffer::back_buffer = Framebuffer::framebuffer_0;
+uint16_t* Framebuffer::front_buffer = Framebuffer::framebuffer_1;
 
+uint16_t* Framebuffer::get_front_buffer() {
+	return front_buffer;
+}
+
+#ifndef PLATFORM_DESKTOP
+// Endian helpers (Pico only)
 void swap_endian(uint16_t* buffer) {
-
 	size_t number_of_pixels = DISPLAY_HEIGHT * DISPLAY_WIDTH;
 	for (size_t i = 0; i < number_of_pixels; i++)
 	{
@@ -19,23 +35,23 @@ void swap_endian(uint16_t* buffer) {
 }
 
 void Framebuffer::init() {
-
 	fill_with_color(0x0000);
 	send_to_display();
 }
-void Framebuffer::swap_buffers() {
 
-	uint16_t* buffer = front_buffer;
-	front_buffer = back_buffer;
-	back_buffer = buffer;
-}
 void Framebuffer::send_to_display() {
-
 	swap_endian(front_buffer);
 	set_window(0, 0, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 1);
 	uint16_t buffer_size = DISPLAY_WIDTH * DISPLAY_HEIGHT;
 	send_data((uint8_t*)front_buffer, buffer_size * 2);
 	swap_endian(front_buffer);
+}
+#endif
+
+void Framebuffer::swap_buffers() {
+	uint16_t* buffer = front_buffer;
+	front_buffer = back_buffer;
+	back_buffer = buffer;
 }
 
 void Framebuffer::set_pixel(uint16_t x, uint16_t y, uint16_t color) {
@@ -222,72 +238,4 @@ void Framebuffer::draw_diamond_outline(int center_x, int center_y, int width, in
 	draw_line_bresenham(center_x - width, center_y, center_x, center_y - height, color);
 	draw_line_bresenham(center_x + width, center_y, center_x, center_y + height, color);
 	draw_line_bresenham(center_x + width, center_y, center_x, center_y - height, color);
-}
-
-void color_test_nobuffer() {
-	set_window(0, 0, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - 1);  // Full screen
-
-	// Black
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0x00);
-		send_data_byte(0x00);
-	}
-	sleep_ms(5000);
-
-	// White
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0xFF);
-		send_data_byte(0xFF);
-	}
-	sleep_ms(5000);
-
-	// Gray
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0x84);
-		send_data_byte(0x10);
-	}
-	sleep_ms(5000);
-
-	// Red
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0xF8);
-		send_data_byte(0x00);
-	}
-	sleep_ms(5000);
-
-	// Green
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0x07);
-		send_data_byte(0xE0);
-	}
-	sleep_ms(5000);
-
-	// Blue
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0x00);
-		send_data_byte(0x1F);
-	}
-	sleep_ms(5000);
-
-	// Yellow
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0xFF);
-		send_data_byte(0xE0);
-	}
-	sleep_ms(5000);
-
-	// Magenta
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0xF8);
-		send_data_byte(0x1F);
-	}
-	sleep_ms(5000);
-
-	// Cyan
-	for (int i = 0; i < 20480; i++) {
-		send_data_byte(0x07);
-		send_data_byte(0xFF);
-	}
-
-	sleep_ms(5000);
 }

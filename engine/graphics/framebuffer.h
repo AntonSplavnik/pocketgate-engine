@@ -1,7 +1,11 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 
-#include "display.h"
+#ifdef PLATFORM_DESKTOP
+    #include "platform_desktop.h"
+#else
+    #include "display.h"
+#endif
 
 // Sprite pixel format for alpha blending
 struct SpritePixel {
@@ -10,11 +14,13 @@ struct SpritePixel {
 };
 
 namespace Framebuffer {
-	static uint16_t framebuffer_0[DISPLAY_HEIGHT * DISPLAY_WIDTH];
-	static uint16_t framebuffer_1[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+	// Declared here, defined in framebuffer.cpp
+	extern uint16_t framebuffer_0[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+	extern uint16_t framebuffer_1[DISPLAY_HEIGHT * DISPLAY_WIDTH];
+	extern uint16_t* back_buffer;
+	extern uint16_t* front_buffer;
 
-	static uint16_t* front_buffer = framebuffer_0;
-	static uint16_t* back_buffer = framebuffer_1;
+	uint16_t* get_front_buffer();
 
 	void init();
 	void swap_buffers();

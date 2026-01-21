@@ -1,8 +1,11 @@
 #ifndef FIXED_POINT_H
 #define FIXED_POINT_H
 
-
-#include "pico/stdlib.h"
+#ifdef PLATFORM_DESKTOP
+    #include <cstdint>
+#else
+    #include "pico/stdlib.h"
+#endif
 
 
 struct Fixed_q16 {

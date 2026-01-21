@@ -1,7 +1,11 @@
 #ifndef ISO_MATH_H
 #define ISO_MATH_H
 
-#include "pico/stdlib.h"
+#ifdef PLATFORM_DESKTOP
+    #include <cstdint>
+#else
+    #include "pico/stdlib.h"
+#endif
 #include "fixed_point.h"
 
 struct World_space {
