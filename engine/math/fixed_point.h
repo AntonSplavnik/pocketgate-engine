@@ -22,7 +22,6 @@ struct Fixed_q16 {
 	inline int32_t to_fixed(const int32_t input) const {
 		return (input << 16);
 	}
-
 	inline int32_t to_int() {
 		return (raw >> 16);
 	}
@@ -67,14 +66,14 @@ struct Fixed_q16 {
 		return (raw < to_fixed(other));
 	}
 
-	bool operator>(const uint16_t other) const {
-		Fixed_q16 result;
-		return (raw > to_fixed(static_cast<int32_t>(other))) ;
-	}
-	bool operator<(const uint16_t other) const {
-		Fixed_q16 result;
-		return (raw < to_fixed(static_cast<int32_t>(other)));
-	}
+	// bool operator>(const uint16_t other) const {
+	// 	Fixed_q16 result;
+	// 	return (raw > to_fixed(static_cast<int32_t>(other))) ;
+	// }
+	// bool operator<(const uint16_t other) const {
+	// 	Fixed_q16 result;
+	// 	return (raw < to_fixed(static_cast<int32_t>(other)));
+	// }
 
 	bool operator>=(const int32_t other) const {
 		Fixed_q16 result;

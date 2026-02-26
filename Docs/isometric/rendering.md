@@ -43,11 +43,11 @@ All projection lines are parallel — no convergence to a vanishing point. Objec
 
 Show multiple faces of an object at once by viewing from an angle:
 
-| Type | Foreshortening | Angle |
-|------|----------------|-------|
-| **Isometric** | All 3 axes equal | ~30° (true) |
-| **Dimetric** | 2 axes equal, 1 different | Varies |
-| **Trimetric** | All 3 axes different | Varies |
+| Type          | Foreshortening            | Angle       |
+|---------------|---------------------------|-------------|
+| **Isometric** | All 3 axes equal          | ~30° (true) |
+| **Dimetric**  | 2 axes equal, 1 different | Varies      |
+| **Trimetric** | All 3 axes different      | Varies      |
 
 ### 2:1 Dimetric Projection (What Games Use)
 

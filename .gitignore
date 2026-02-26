@@ -1,6 +1,15 @@
 build/
-
+build_desktop/
+assets/
 *.o
 *.elf
 *.uf2
+*.bin
+*.hex
 *.DS_Store
+
+# PlatformIO
+stm32/.pio/
+stm32/.vscode/
+stm32/lib/
+stm32/test/

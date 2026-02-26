@@ -14,7 +14,7 @@ struct SpritePixel {
 };
 
 namespace Framebuffer {
-	// Declared here, defined in framebuffer.cpp
+
 	extern uint16_t framebuffer_0[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 	extern uint16_t framebuffer_1[DISPLAY_HEIGHT * DISPLAY_WIDTH];
 	extern uint16_t* back_buffer;

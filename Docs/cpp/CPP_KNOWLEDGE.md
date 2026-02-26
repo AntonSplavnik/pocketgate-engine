@@ -7,6 +7,7 @@
 - [Volatile Keyword](#volatile-keyword)
 - [Static Keyword](#static-keyword)
 - [Inline Keyword](#inline-keyword)
+- [Explicit/Implicit Conversions](#explicitimplicit-conversions)
 
 - [Smart Pointers](#smart-pointers)
 - [Lambda Functions](#lambda-functions)
@@ -559,6 +560,157 @@ int helper(int x) { return x * 2; }  // single .cpp file
 - Does NOT guarantee actual inlining (compiler decides)
 - Best for small utility functions (one-liners, simple math)
 - No runtime overhead — purely a compile/link time concept
+
+---
+
+## Explicit/Implicit Conversions
+
+### Implicit Conversion
+
+**Implicit conversion** = compiler converts types automatically without you asking:
+
+```cpp
+void foo(Fixed_q16 val);
+
+foo(5);              // int → Fixed_q16 happens silently
+Fixed_q16 x = 5;     // int → Fixed_q16 happens silently
+if (myFixed > 5)     // int → Fixed_q16 happens silently (for comparison)
+```
+
+This works when a class has a **non-explicit constructor** that accepts the type:
+
+```cpp
+struct Fixed_q16 {
+    Fixed_q16(int32_t val) { ... }  // Non-explicit - allows implicit conversion
+};
+```
+
+### Explicit Conversion
+
+Adding `explicit` to a constructor prevents automatic conversion:
+
+```cpp
+struct Fixed_q16 {
+    explicit Fixed_q16(int32_t val) { ... }  // Explicit - requires manual conversion
+};
+
+void foo(Fixed_q16 val);
+
+foo(5);              // ERROR - won't compile
+foo(Fixed_q16(5));   // OK - you explicitly asked for it
+Fixed_q16 x = 5;     // ERROR - won't compile
+Fixed_q16 x(5);      // OK - direct initialization
+```
+
+### Why Use explicit?
+
+Prevents accidental conversions that might hide bugs:
+
+```cpp
+void process(Fixed_q16 distance);
+void process(std::string name);
+
+process(0);  // Ambiguous! Did you mean distance=0 or empty string?
+```
+
+With `explicit`, the compiler forces you to be clear about intent.
+
+**When to use explicit:**
+- Container types, file handles, resource wrappers
+- Types where accidental conversion could cause subtle bugs
+
+**When implicit is fine:**
+- Math types (Fixed_q16, Vector2D) where conversion from numbers is natural
+- Wrapper types that logically "are" the wrapped type
+
+---
+
+### Initialization vs Assignment Syntax
+
+C++ has multiple ways to create objects - this is a common confusion point.
+
+**All of these are INITIALIZATION (call constructor):**
+```cpp
+Fixed_q16 a(5);      // Direct initialization
+Fixed_q16 b = 5;     // Copy initialization (still calls constructor!)
+Fixed_q16 c{5};      // Uniform/brace initialization (C++11)
+Fixed_q16 d = {5};   // Also uniform initialization
+```
+
+**This is ASSIGNMENT (object already exists):**
+```cpp
+Fixed_q16 e;         // Default constructor called here
+e = 5;               // Assignment operator called here
+```
+
+### Key Insight
+
+The `=` in the **same line as the type declaration** is initialization, NOT assignment:
+
+```cpp
+Fixed_q16 x = 5;  // x doesn't exist yet → must construct it
+x = 10;           // x exists → assignment operator
+```
+
+The object doesn't exist yet on the first line, so there's nothing to "assign to" - it must be constructed.
+
+### How explicit Affects Initialization
+
+`explicit` blocks the `Type x = value;` form:
+
+```cpp
+// With non-explicit constructor:
+Fixed_q16 a = 5;     // OK - copy initialization allowed
+Fixed_q16 b(5);      // OK - direct initialization
+
+// With explicit constructor:
+Fixed_q16 a = 5;     // ERROR - copy initialization blocked
+Fixed_q16 b(5);      // OK - direct initialization still works
+Fixed_q16 c = Fixed_q16(5);  // OK - explicit construction
+```
+
+### Default Assignment Operator
+
+You don't need to implement `operator=` for simple structs. The compiler auto-generates one that copies all members:
+
+```cpp
+struct Fixed_q16 {
+    int32_t raw;
+    // Compiler generates: Fixed_q16& operator=(const Fixed_q16&) = default;
+};
+
+Fixed_q16 a(5);
+Fixed_q16 b;
+b = a;  // Works - compiler-generated assignment copies 'raw'
+```
+
+---
+
+### Operator Overload Ambiguity
+
+When overloading comparison operators for multiple types, be careful of ambiguity:
+
+```cpp
+struct Fixed_q16 {
+    bool operator>(int32_t other) const;
+    bool operator>(uint16_t other) const;  // Problem!
+};
+
+Fixed_q16 x;
+x > 0;  // ERROR: ambiguous - 0 is 'int', equally convertible to int32_t and uint16_t
+```
+
+**Solution:** Keep only one integer overload (prefer `int32_t`). Smaller types (`uint16_t`, `int16_t`) will implicitly widen to `int32_t` - it's a safe, lossless conversion.
+
+```cpp
+struct Fixed_q16 {
+    bool operator>(int32_t other) const;  // Handles all integer types
+};
+
+uint16_t small = 10;
+x > small;  // OK - uint16_t widens to int32_t automatically
+x > 0;      // OK - int converts to int32_t
+```
 
 ---
 

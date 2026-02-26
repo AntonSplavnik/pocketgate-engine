@@ -36,6 +36,7 @@ void swap_endian(uint16_t* buffer) {
 
 void Framebuffer::init() {
 	fill_with_color(0x0000);
+	swap_buffers();
 	send_to_display();
 }
 
@@ -61,9 +62,10 @@ void Framebuffer::set_pixel(uint16_t x, uint16_t y, uint16_t color) {
 }
 void Framebuffer::fill_with_color(uint16_t color) {
 
-	for (size_t i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++) {
-		back_buffer[i] = color;
-	}
+	// for (size_t i = 0; i < DISPLAY_WIDTH * DISPLAY_HEIGHT; i++) {
+	// 	back_buffer[i] = color;
+	// }
+	draw_rectangle_memset(0, DISPLAY_HEIGHT, 0, DISPLAY_WIDTH, color);
 }
 
 void Framebuffer::draw_line(uint16_t x, uint16_t y, uint16_t width, uint16_t color) {
@@ -107,8 +109,7 @@ void Framebuffer::draw_rectangle_memset(uint16_t y, uint16_t height, uint16_t x,
 
 	size_t line_len = width * sizeof(uint16_t);
 	uint16_t *dest = line + DISPLAY_WIDTH;
-	size_t end_raw_y = y + height;
-	for (size_t i = 1; i < end_raw_y; i++) {
+	for (size_t i = 1; i < height; i++) {
 		memcpy(dest, line, line_len);
 		dest += DISPLAY_WIDTH;
 	}

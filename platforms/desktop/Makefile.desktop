@@ -1,0 +1,67 @@
+# Simple Makefile for GLFW desktop build
+
+# Compiler
+CXX = g++
+CXXFLAGS = -std=c++11 -Wall -O2 -DPLATFORM_DESKTOP
+
+# Directories
+SRC_DIR = .
+OBJ_DIR = build_desktop/obj
+BIN_DIR = build_desktop
+
+# Include paths
+INCLUDES = -I. -Iengine/graphics -Iengine/isometric -Iengine/math -Iplatforms/desktop -Iplatforms/desktop/glad/include -I/opt/homebrew/include
+
+# Libraries (macOS)
+# Install GLFW with: brew install glfw
+LIBS = -L/opt/homebrew/lib -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+
+# Source files (only desktop-compatible ones)
+SRCS = platforms/desktop/main_glfw.cpp \
+       engine/graphics/framebuffer.cpp \
+       engine/isometric/iso_math.cpp \
+       platforms/desktop/glad/src/glad.c
+
+# Object files (all go to OBJ_DIR)
+OBJS = $(OBJ_DIR)/main_glfw.o \
+       $(OBJ_DIR)/framebuffer.o \
+       $(OBJ_DIR)/iso_math.o \
+       $(OBJ_DIR)/glad.o
+
+# Output binary
+TARGET = $(BIN_DIR)/pocket_gate
+
+# Default target
+all: dirs $(TARGET)
+
+# Create directories
+dirs:
+	mkdir -p $(OBJ_DIR)
+	mkdir -p $(BIN_DIR)
+
+# Link
+$(TARGET): $(OBJS)
+	$(CXX) $(OBJS) -o $(TARGET) $(LIBS)
+
+# Compile rules
+$(OBJ_DIR)/main_glfw.o: platforms/desktop/main_glfw.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/framebuffer.o: engine/graphics/framebuffer.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/iso_math.o: engine/isometric/iso_math.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/glad.o: platforms/desktop/glad/src/glad.c
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+# Clean
+clean:
+	rm -rf $(OBJ_DIR) $(TARGET)
+
+# Run
+run: all
+	./$(TARGET)
+
+.PHONY: all dirs clean run

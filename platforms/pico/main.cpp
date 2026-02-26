@@ -1,0 +1,435 @@
+#include <pico/stdlib.h>
+#include <pico/time.h>
+#include <hardware/pwm.h>
+#include <hardware/spi.h>
+#include <stdlib.h>
+#include <random>
+#include <math.h>
+#include <fstream>
+#include <iostream>
+
+#include "drivers/display.h"
+#include "framebuffer.h"
+#include "buttons.h"
+#include "assets/skeleton_alpha.h"
+#include "assets/wizard.h"
+#include "assets/wizard2.h"
+#include "engine/isometric/iso_math.h"
+
+using namespace Framebuffer;
+using namespace Buttons;
+
+const uint LED_PIN = 25;
+const uint LED_L = 28;
+const uint LED_R = 4;
+
+static std::mt19937 rng(time_us_32());
+int random_int_distr(int min, int max) {
+	std::uniform_int_distribution<int> dist(min, max);
+	return dist(rng);
+}
+int random_int_modulo(int min, int max) {
+	return min + (rng() % (max - min + 1));
+}
+
+void fps_counter() {
+
+	static uint32_t frame_count = 0;
+	static uint64_t last_frame_time = time_us_64();
+
+	frame_count++;
+
+	uint64_t elapsed_time = time_us_64() - last_frame_time;
+	if(elapsed_time >= 1000000) {
+		printf("FPS: %lu\n", frame_count);
+		frame_count = 0;
+		last_frame_time = time_us_64();
+	}
+}
+Fixed_q16 delta_time() {
+
+	static uint32_t last_frame = 0;
+	static bool first_call = true;
+
+	uint32_t now = time_us_32();
+	if(first_call) {
+		last_frame = now;
+		first_call = false;
+	}
+
+	uint32_t delta_us = now - last_frame;
+	last_frame = now;
+	Fixed_q16 dt;
+	dt.raw = (static_cast<int32_t>(delta_us) << 16) / 1000000;
+	return dt;
+}
+
+void init_led_pwm(uint pin) {
+	gpio_set_function(pin, GPIO_FUNC_PWM);
+	uint slice = pwm_gpio_to_slice_num(pin);
+	pwm_set_wrap(slice, 1023);
+	pwm_set_clkdiv(slice, 122.07f);
+	pwm_set_gpio_level(pin, 0);
+	pwm_set_enabled(slice, true);
+}
+void set_led_brightness(uint pin, uint16_t level) {
+	if(level > 1023) level = 1023;
+	pwm_set_gpio_level(pin, level);
+}
+void init_led_pins() {
+
+	// Pico onboard LED
+	gpio_init(LED_PIN);
+	gpio_set_dir(LED_PIN, GPIO_OUT);
+
+	init_led_pwm(LED_L);
+	init_led_pwm(LED_R);
+
+	// // Trigg Led_left
+	// gpio_init(LED_L);
+	// gpio_set_dir(LED_L, GPIO_OUT);
+
+	// // Trigg Led_right
+	// gpio_init(LED_R);
+	// gpio_set_dir(LED_R, GPIO_OUT);
+}
+
+void ambient_glow(uint led, float speed) {
+	 float time_sec = time_us_64() / 1000000.0f;
+
+	uint16_t brightness = (sinf(time_sec *  speed) + 1.0f) * 500.0f;
+	set_led_brightness(led, brightness);
+}
+void dim_led(uint led, float speed ) {
+	float time_sec = time_us_64() / 1000000.0f;
+
+	// Triangle wave (0→1→0→1...)
+	float cycle = fmodf(time_sec * speed, 2.0f);  // 2-second cycle
+	float brightness_normalized = (cycle < 1.0f) ? cycle : (2.0f - cycle);
+
+	uint16_t brightness = brightness_normalized * 1023.0f;
+	set_led_brightness(led, brightness);
+}
+void dim_led(uint led, uint16_t level) {
+	for (size_t i = 0; i < level; i++)
+	{
+		set_led_brightness(led, i);
+		sleep_ms(1);
+	}
+	for (int i = level; i >= 0; i--)
+	{
+		set_led_brightness(led, i);
+		sleep_ms(1);
+	}
+}
+
+void blik(){
+
+	init_led_pins();
+
+	while (true) {
+		// Onboard LED blinks
+		// gpio_put(LED_PIN, 1);
+		// sleep_ms(randomInt(0, 250));
+		// gpio_put(LED_PIN, 0);
+
+		// Left LED
+		// dim_led(LED_L, 1023);
+		// sleep_ms(randomInt(0, 250));
+
+		// gpio_put(LED_L, 1);
+		// sleep_ms(randomInt(0, 250));
+		// gpio_put(LED_L, 0);
+
+		// Right LED
+		// sleep_ms(randomInt(0, 250));
+
+		// gpio_put(LED_R, 1);
+		// sleep_ms(randomInt(0, 250));
+		// gpio_put(LED_R, 0);
+
+		dim_led(LED_L, 0.5f);
+		ambient_glow(LED_R, 1.0f);
+		sleep_ms(10);
+	}
+}
+
+struct NamedColor {
+	const char* name;
+	uint16_t value;
+};
+
+static const NamedColor COLORS[] = {
+	{"RED",     0xF800}, // 0
+	{"GREEN",   0x07E0}, // 1
+	{"BLUE",    0x001F}, // 2
+	{"WHITE",   0xFFFF}, // 3
+	{"BLACK",   0x0000}, // 4
+	{"GREAY",   0x8410}, // 5
+	{"YELLOW",  0xFFE0}, // 6
+	{"CYAN",    0x07FF}, // 7
+	{"MAGENTA", 0xF81F}  // 8
+};
+
+void color_test() {
+
+	init();
+	sleep_ms(3000);
+
+	for(const auto& color: COLORS) {
+		fill_with_color(color.value);
+		swap_buffers();
+		send_to_display();
+		sleep_ms(3000);
+	}
+}
+
+void random_pixels_test() {
+
+	fill_with_color(0x0000);  // Black background
+	// Draw complex scene to back buffer
+	for(int i = 0; i < 5000; i++) {
+		set_pixel(random_int_modulo(0, 160), random_int_modulo(0, 128), COLORS[random_int_modulo(5, 7)].value);
+	}
+
+	fps_counter();
+
+	swap_buffers();
+	send_to_display();
+	// No sleep - immediate next frame!
+}
+
+void line_test(){
+
+	fill_with_color(0x0000);
+	draw_line(50, 50, 50, 0xFFE0);
+	swap_buffers();
+	send_to_display();
+}
+
+void rectangle_test() {
+	fill_with_color(0x0000);
+	draw_rectangle_memset(128/2 - 25/2, 25, 160/2 - 25/2, 25, 0xFFE0);
+	swap_buffers();
+	send_to_display();
+}
+
+struct Entity {
+	Fixed_q16	y;
+	uint16_t	height;
+	Fixed_q16	x;
+	uint16_t	width;
+	uint16_t	color;
+};
+
+void performe_button_action(ButtonState state, Entity& rect) {
+
+	Fixed_q16 speed = 100;
+	Fixed_q16 dt = delta_time();
+	Fixed_q16 movement = speed * dt;
+
+	if(state.w && rect.y > 0){
+		rect.y -= movement;
+		Fixed_q16 min_y = 0;
+		if(rect.y < min_y) rect.y = min_y;
+	}
+	if(state.a && rect.x > 0) {
+		rect.x -= movement;
+		Fixed_q16 min_x = 0;
+		if(rect.x < min_x) rect.x = min_x;
+	}
+	if(state.s && rect.y + rect.height < DISPLAY_HEIGHT) {
+		rect.y += movement;
+		Fixed_q16 max_y = DISPLAY_HEIGHT - rect.height;
+		if(rect.y > max_y) rect.y = max_y;
+	}
+	if(state.d && rect.x + rect.width < DISPLAY_WIDTH) {
+		rect.x += movement;
+		Fixed_q16 max_x = DISPLAY_WIDTH - rect.width;
+		if(rect.x > max_x) rect.x = max_x;
+	}
+}
+
+void movement_tracking_test_regular() {
+
+	Entity rect = {128/2 - 25/2, 25, 160/2 - 25/2, 25, 0xFFE0};
+	fill_with_color(0x0000);
+	draw_rectangle_memset(rect.y.to_int(), rect.height, rect.x.to_int(), rect.width, rect.color);
+	swap_buffers();
+	send_to_display();
+
+	ButtonState buttons;
+	while (true)
+	{
+		buttons = button_polling();
+		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
+			fill_with_color(0x0000);
+			performe_button_action(buttons, rect);
+			draw_rectangle_memset(rect.y.to_int(), rect.height, rect.x.to_int(), rect.width, rect.color);
+			fps_counter();
+			swap_buffers();
+			send_to_display();
+		}
+	}
+}
+void movement_tracking_test_polac() {
+
+	Entity rect = {128/2 - 25/2, 25, 160/2 - 25/2, 25, 0xFFE0};
+	fill_with_color(0x0000);
+	for(int i = 0; i < 3536; i++) {
+		set_pixel(random_int_modulo(rect.x.to_int(), rect.x.to_int() + rect.width), random_int_modulo(rect.y.to_int(), rect.y.to_int() + rect.height), COLORS[random_int_modulo(5, 7)].value);
+	}
+	swap_buffers();
+	send_to_display();
+
+	ButtonState buttons;
+	while (true)
+	{
+		buttons = button_polling();
+		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
+			fill_with_color(0x0000);
+			performe_button_action(buttons, rect);
+			for(int i = 0; i < 3536; i++) {
+				set_pixel(random_int_modulo(rect.x.to_int(), rect.x.to_int() + rect.width), random_int_modulo(rect.y.to_int(), rect.y.to_int() + rect.height), COLORS[random_int_modulo(5, 7)].value);
+			}
+			fps_counter();
+			swap_buffers();
+			send_to_display();
+		}
+		else {
+			sleep_ms(1);
+			fill_with_color(0x0000);
+			for(int i = 0; i < 3536; i++) {
+				set_pixel(random_int_modulo(rect.x.to_int(), rect.x.to_int() + rect.width), random_int_modulo(rect.y.to_int(), rect.y.to_int() + rect.height), COLORS[random_int_modulo(5, 7)].value);
+			}
+			swap_buffers();
+			send_to_display();
+			fps_counter();
+		}
+	}
+}
+
+void sprite_test() {
+
+	fill_with_color(COLORS[3].value);
+	// draw_sprite(128/2 - 25/2, 43, 160/2 - 25/2, 59, skeleton_data);
+
+	draw_sprite_alpha(2, skeleton_alpha_height, 2, skeleton_alpha_width, skeleton_alpha_data);
+	draw_sprite_alpha(2, skeleton_alpha_height, 160 - skeleton_alpha_width, skeleton_alpha_width, skeleton_alpha_data);
+
+	draw_sprite_alpha(128/2 - skeleton_alpha_height/2, skeleton_alpha_height, 160/2 - skeleton_alpha_width/2, skeleton_alpha_width, skeleton_alpha_data);
+
+	draw_sprite_alpha(128 - skeleton_alpha_height, skeleton_alpha_height, 2, skeleton_alpha_width, skeleton_alpha_data);
+	draw_sprite_alpha(128 - skeleton_alpha_height, skeleton_alpha_height, 160 - skeleton_alpha_width, skeleton_alpha_width, skeleton_alpha_data);
+
+	swap_buffers();
+	send_to_display();
+}
+
+void movement_tracking_test_sprite_skeleton() {
+
+	Entity sprite_coord = {128/2 - skeleton_alpha_height/2, skeleton_alpha_height, 160/2 - skeleton_alpha_width/2, skeleton_alpha_width};
+
+	fill_with_color(COLORS[3].value);
+	draw_sprite_alpha(sprite_coord.y.to_int(), sprite_coord.height, sprite_coord.x.to_int(), sprite_coord.width, skeleton_alpha_data);
+	swap_buffers();
+	send_to_display();
+
+	ButtonState buttons;
+	while (true)
+	{
+		buttons = button_polling();
+		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
+			fill_with_color(COLORS[3].value);
+			performe_button_action(buttons, sprite_coord);
+			draw_sprite_alpha(sprite_coord.y.to_int(), sprite_coord.height, sprite_coord.x.to_int(), sprite_coord.width, skeleton_alpha_data);
+			fps_counter();
+			swap_buffers();
+			send_to_display();
+		}
+	}
+}
+void movement_tracking_test_sprite_wizard() {
+
+	Entity wizard = {2, wizard2_height, 2, wizard2_width};
+	Entity wizard2 = {128/2 - wizard_height/2, wizard_height, 160/2 - wizard_width/2, wizard_width};
+
+	fill_with_color(COLORS[4].value);
+
+	draw_sprite_alpha(wizard.y.to_int(), wizard.height, wizard.x.to_int(), wizard.width, wizard_data);
+	draw_sprite_alpha(wizard2.y.to_int(), wizard2.height, wizard2.x.to_int(), wizard2.width, wizard2_data);
+
+	swap_buffers();
+	send_to_display();
+
+	ButtonState buttons;
+	while (true)
+	{
+		buttons = button_polling();
+		if(buttons.a || buttons.d || buttons.i || buttons.j || buttons.k || buttons.l || buttons.s || buttons.w) {
+			sleep_ms(1);
+			fill_with_color(COLORS[4].value);
+			draw_sprite_alpha(wizard.y.to_int(), wizard.height, wizard.x.to_int(), wizard.width, wizard_data);
+			performe_button_action(buttons, wizard2);
+			draw_sprite_alpha(wizard2.y.to_int(), wizard2.height, wizard2.x.to_int(), wizard2.width, wizard2_data);
+			fps_counter();
+			swap_buffers();
+			send_to_display();
+		}
+	}
+}
+
+void bresenham_line_drawing_test() {
+
+	fill_with_color(COLORS[4].value);
+	draw_line_bresenham(0, 0, 159, 127, COLORS[6].value);
+	draw_line_bresenham(159/2, 0, 159/2, 127, COLORS[6].value);
+	draw_line_bresenham(0, 127/2, 159, 127/2, COLORS[6].value);
+	draw_line_bresenham(159, 0, 0, 127, COLORS[6].value);
+
+	swap_buffers();
+	send_to_display();
+}
+
+void diamond_outline_test() {
+
+	fill_with_color(COLORS[4].value);
+	draw_diamond_outline(159/2, 127/2, 32, 16, COLORS[6].value);
+
+	swap_buffers();
+	send_to_display();
+}
+
+void world_to_screen_test() {
+
+	World_space world {};
+
+}
+
+int main(){
+
+	stdio_init_all();
+	sleep_ms(3000);
+
+	printf("PocketGate v0.1\n");
+
+	init_display();
+	init_buttons();
+
+	// color_test();
+	// random_pixels_test();
+	// line_test();
+	// rectangle_test();
+	// movement_tracking_test_polac();
+	// sprite_test();
+	// movement_tracking_test_sprite_wizard();
+	// bresenham_line_drawing_test();
+	// diamond_outline_test();
+
+	blik();
+
+	return 0;
+}

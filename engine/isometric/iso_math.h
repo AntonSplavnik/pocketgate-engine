@@ -6,7 +6,7 @@
 #else
     #include "pico/stdlib.h"
 #endif
-#include "fixed_point.h"
+#include "engine/math/fixed_point.h"
 
 struct World_space {
 	// z - up; y - north, x - east
@@ -15,15 +15,14 @@ struct World_space {
 	Fixed_q16 z = 0;
 };
 
-
 struct Screen_space {
-	int x = 0;
-	int y = 0;
+	int16_t x = 0;
+	int16_t y = 0;
 };
 
 struct Camera {
-	int offset_x = 0;
-	int offset_y = 0;
+	int32_t offset_x = 0;
+	int32_t offset_y = 0;
 };
 
 inline Screen_space world_to_screen(const World_space& world, const Camera& cam) {
