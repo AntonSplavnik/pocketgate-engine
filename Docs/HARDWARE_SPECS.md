@@ -134,7 +134,7 @@ All specs are based on actual components in use.
 | Channels          | Stereo (2× NS4150B)                                          |
 | Max output        | 2× 2.8W into 4Ω                                              |
 | Speaker impedance | 4Ω (matched to 8Ω speakers via parallel pair, TBD)           |
-| Supply            | **3.3V** (PCM5100A pins AVDD/CPVDD/DVDD all require 3.3V)    |
+| Supply            | **5V** (module has onboard ME6231A33M3G LDO → 3.3V for PCM5100A; NS4150B runs on 5V for full power) |
 
 ---
 
@@ -227,27 +227,25 @@ All specs are based on actual components in use.
                     ├── [C1] 100µF electrolytic  ← bulk, SW6106 output
                     ├── [C2] 100nF ceramic X7R   ← HF bypass
                     │
-                ────┴────────────5V rail──────────────────────┐
-                │                                             │
-         WeAct STM32 board                                    │
-         (5V pin → AMS1117)                      ┌────────────┴────────────┐
-                │                                │                         │
-            3.3V rail                       Display ST7796S          ESP8266 D1 Mini
-            │                               (5V recommended)         (5V → internal LDO → 3.3V)
-            ├── [C3] 10µF ceramic X5R  ← bulk, 3.3V rail
-            ├── [C4] 100nF ceramic X7R ← HF bypass
-            │
-        ┌───┴──────────────┬──────────────────┐
-        │                  │                  │
-   STM32H743           PSRAM64H         Audio module
-   (board has           [C5] 100nF       (PCM5100A + NS4150B)
-    own caps)           ceramic X7R      AVDD / CPVDD / DVDD → 3.3V
-                        [C6] 10µF        │
-                        ceramic X5R      ├── AVDD:   [C7]  10µF + [C8]  100nF ceramic X7R
-                        ← bare chip,     ├── CPVDD:  [C9]  10µF + [C10] 100nF ceramic X7R
-                          required!      ├── DVDD:   [C11]  1µF + [C12] 100nF ceramic X7R
-                                         ├── CPVNEG: [C13]  1µF ceramic X7R  (charge pump)
-                                         └── LDOO:   [C14]  1µF ceramic X7R  (internal LDO)
+        ────────────┴────────────5V rail──────────────────────────┐
+        │                                                         │
+ WeAct STM32 board                                                │
+ (5V pin → AMS1117)                          ┌────────────────────┴────────────────┐
+        │                                    │                    │                │
+    3.3V rail                          Display ST7796S    ESP8266 D1 Mini    Audio module
+    │                                 (5V recommended)   (5V → LDO → 3.3V)  (5V input)
+    ├── [C3] 10µF ceramic X5R  ← bulk, 3.3V rail                                   │
+    ├── [C4] 100nF ceramic X7R ← HF bypass                                   ME6231A33M3G
+    │                                                                        (onboard LDO)
+    └─→ PSRAM64H (bare chip)                                                        │
+         [C5] 100nF ceramic X7R  ← required                              VDD33 (3.3V)
+         [C6] 10µF ceramic X5R   ← required                                         │
+                                                                       ┌────────────┴────────────┐
+                                                                       │                         │
+                                                                   PCM5100A DAC              NS4150B amps
+                                                                 (3.3V regulated)            (5V direct)
+                                                                 AVDD/CPVDD/DVDD              VCC = 5V
+                                                                                             (full power)
 ```
 
 ### Capacitor Reference List
@@ -260,19 +258,11 @@ All specs are based on actual components in use.
 | C4  | 100nF  | Ceramic X7R   | 3.3V rail at WeAct 3V3 pin  | HF bypass                             |
 | C5  | 100nF  | Ceramic X7R   | PSRAM64H VDD, close to pin  | Per-chip bypass (**required** — bare chip, standard practice, no datasheet value) |
 | C6  | 10µF   | Ceramic X5R   | PSRAM64H VDD                | Bulk for PSRAM (**required** — bare chip, standard practice, no datasheet value)  |
-| C7  | 10µF   | Ceramic X7R   | PCM5100A AVDD               | Analog supply bulk                    |
-| C8  | 100nF  | Ceramic X7R   | PCM5100A AVDD               | Analog supply HF bypass               |
-| C9  | 10µF   | Ceramic X7R   | PCM5100A CPVDD              | Charge pump supply bulk               |
-| C10 | 100nF  | Ceramic X7R   | PCM5100A CPVDD              | Charge pump HF bypass                 |
-| C11 | 1µF    | Ceramic X7R   | PCM5100A DVDD               | Digital supply bulk                   |
-| C12 | 100nF  | Ceramic X7R   | PCM5100A DVDD               | Digital supply HF bypass              |
-| C13 | 1µF    | Ceramic X7R   | PCM5100A CPVNEG             | Charge pump negative rail filter      |
-| C14 | 1µF    | Ceramic X7R   | PCM5100A LDOO               | Internal LDO output filter            |
 
 **Priority for prototype:**
 - **Must add now:** C1–C6 (5V/3.3V rail bulk + PSRAM bare chip)
-- **Important for audio quality:** C7–C14 (PCM5100A — supply noise = audible hum)
-- **Already handled:** STM32 board, D1 Mini, display module, audio module board all have their own caps
+- **Already onboard audio module:** C7–C14 (PCM5100A supply caps — included on WeAct module PCB)
+- **Already handled:** STM32 board, D1 Mini, display module, audio module all have their own onboard caps
 
 ### 5V Rail Consumers
 
@@ -281,7 +271,8 @@ All specs are based on actual components in use.
 | WeAct STM32 board  | ~200–380mA   | AMS1117 feeds 3.3V rail     |
 | Display ST7796S    | ~40–80mA     | 5V recommended              |
 | ESP8266 D1 Mini    | ~170–320mA   | WiFi TX peak                |
-| **Total peak**     | **~1.0–1.8A**| Within SW6106 3A limit      |
+| Audio module       | ~30–60mA     | ME6231A33M3G LDO + NS4150B amps (idle to moderate) |
+| **Total peak**     | **~1.1–1.9A**| Within SW6106 3A limit      |
 
 ### 3.3V Rail Consumers (via AMS1117, max 1A)
 
@@ -289,9 +280,7 @@ All specs are based on actual components in use.
 |----------------|---------------|------------------------------|
 | STM32H743VIT6  | ~130–280mA    | 480MHz, all peripherals      |
 | PSRAM64H       | 40mA max      | Active QSPI reads/writes (datasheet) |
-| PCM5100A DAC   | ~11mA         | AVDD+CPVDD+DVDD at 48kHz     |
-| NS4150B × 2    | ~8mA idle     | Rises with audio load        |
-| **Total typical** | **~180–340mA** | Comfortable for AMS1117  |
+| **Total typical** | **~170–320mA** | Comfortable for AMS1117 (audio module has its own 3.3V regulator) |
 
 **Note — prototype vs custom PCB:**
 - Prototype: AMS1117 LDO is adequate (~66% efficient, generates some heat)
