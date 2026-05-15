@@ -8,8 +8,20 @@
 #include <typeindex>
 #include <typeinfo>
 #include <utility>
+#include <span>
 
 using EntityID = size_t;
+
+class IComponent {
+public:
+    IComponent() = delete;
+    IComponent(EntityID ownerId) : ownerId(ownerId) {}
+    virtual ~IComponent() = default;
+    
+    EntityID getOwnerId() const noexcept { return ownerId; }
+private:
+    EntityID ownerId;
+};
 
 /*
     COMPONENTS
@@ -27,9 +39,9 @@ public:
 
     void remove(EntityID id);
 
-    T* get(EntityID id) const;
+    T* get(EntityID id);
 
-    std::vector<T>& getAll();
+    std::span<T> getAll();
 private:
     std::unordered_map<EntityID, size_t> entityToIndex;
     std::vector<T> data;
@@ -42,11 +54,13 @@ class IEntity {
 public:
     virtual ~IEntity() {}
 
-    EntityID getId() const noexcept;
+    EntityID id() const noexcept {
+        return _id;
+    }
 protected: // allow IEntity instantiation only from derived class
-    IEntity() : id(++idCounter) {}
+    IEntity() : _id(++idCounter) {}
 private:
-    const EntityID id;
+    const EntityID _id;
     inline static EntityID idCounter = 0;
 };
 
@@ -56,23 +70,30 @@ private:
 class Registry final {
 public:
     template<typename T, typename... Args>
-    void emplace(const IEntity* e, Args&&... args);
+    requires std::derived_from<T, IComponent>
+    void emplace(EntityID id, Args&&... args);
 
     template<typename T>
-    void remove(const IEntity* e);
+    requires std::derived_from<T, IComponent>
+    void removeEntityComponent(EntityID id);
 
     template<typename T>
-    std::vector<T>& get();
+    requires std::derived_from<T, IComponent>
+    std::optional<std::span<T>> getComponents() const;
+
+    template<typename T>
+    requires std::derived_from<T, IComponent>
+    T* getComponent(EntityID id);
 
     template<typename T, typename... Args>
     requires std::derived_from<T, IEntity>
     std::weak_ptr<T> createEntity(Args&&... args);
 
-    void destroyEntity(const IEntity* e);
+    void destroyEntity(EntityID id);
 
 private:
-    std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>> componentsStorage;
-    std::unordered_map<EntityID, std::shared_ptr<IEntity>> entitiesStorage;
+    std::unordered_map<std::type_index, std::unique_ptr<IComponentStorage>> componentTypeToStorage;
+    std::unordered_map<EntityID, std::shared_ptr<IEntity>> entityIdToToEntity;
 };
 
 /*
@@ -81,38 +102,34 @@ private:
 template<typename T>
 template<typename... Args>
 void ComponentStorage<T>::add(EntityID id, Args&&... args) {
-    if (!entityToIndex.contains(id)) {
-        data.emplace_back(T(std::forward<Args>(args)...));
-        entityToIndex[id] = data.size() - 1;
+    if (const auto it = entityToIndex.find(id); it == entityToIndex.end()) {
+        data.emplace_back(T(id, std::forward<Args>(args)...));
+        entityToIndex.emplace(id, data.size() - 1);
     }
 }
 
 template<typename T>
 void ComponentStorage<T>::remove(EntityID id) {
-    if (auto it = entityToIndex.find(id); it != entityToIndex.end()) {
-        data.erase(data.begin() + it->second);
-        entityToIndex.erase(it);
+    if (const auto it = entityToIndex.find(id); it == entityToIndex.end()) {
+        const auto &lastComponent = data.back();
+        entityToIndex[lastComponent.getOwnerId()] = it->second;
+        entityToIndex.erase(id);
+        data[it->second] = std::move(lastComponent);
+        data.pop_back();
     }
 }
 
 template<typename T>
-T* ComponentStorage<T>::get(EntityID id) const {
-    if (auto it = entityToIndex.find(id); it != entityToIndex.end())
-        return data[it->second];
+T* ComponentStorage<T>::get(EntityID id) {
+    if (const auto it = entityToIndex.find(id); it != entityToIndex.end())
+        return &data[it->second];
 
     return nullptr;
 }
 
 template<typename T>
-std::vector<T>& ComponentStorage<T>::getAll() {
+std::span<T> ComponentStorage<T>::getAll() {
     return data;
-}
-
-/*
-    ENTITY
-*/
-EntityID IEntity::getId() const noexcept {
-    return id;
 }
 
 /*
@@ -121,50 +138,66 @@ EntityID IEntity::getId() const noexcept {
 template<typename T, typename... Args>
 requires std::derived_from<T, IEntity>
 std::weak_ptr<T> Registry::createEntity(Args&&... args) {
-    auto ent = std::make_shared<T>(std::forward<Args>(args)...);
-    entitiesStorage[ent.get()->getId()] = ent;
-    return ent;
+    auto entity = std::make_shared<T>(std::forward<Args>(args)...);
+    entityIdToToEntity.emplace(entity.get()->id(), entity);
+
+    return entity;
 }
 
-void Registry::destroyEntity(const IEntity* e) {
-    if (auto it = entitiesStorage.find(e->getId()); it != entitiesStorage.end()) {
-        entitiesStorage.erase(it);
+void Registry::destroyEntity(EntityID id) {
+    if (auto it = entityIdToToEntity.find(id); it != entityIdToToEntity.end()) {
+        entityIdToToEntity.erase(it);
         // TODO: delete all components
     }
 }
 
 template<typename T>
-void Registry::remove(const IEntity *e) {
-    auto key = std::type_index(typeid(T));
-    if (auto it = componentsStorage.find(key); it != componentsStorage.end()) {
-        ComponentStorage<T> *c = static_cast<ComponentStorage<T>*>(it->second.get());
-        c->remove(e->getId());
+requires std::derived_from<T, IComponent>
+void Registry::removeEntityComponent(EntityID id) {
+    const auto key = std::type_index(typeid(T));
+    if (const auto it = componentTypeToStorage.find(key); it != componentTypeToStorage.end()) {
+        ComponentStorage<T> *store = static_cast<ComponentStorage<T>*>(it->second.get());
+        store->remove(id);
     }
 }
 
 template<typename T, typename... Args>
-void Registry::emplace(const IEntity *e, Args&&... args) {
-    auto key = std::type_index(typeid(T));
-    if (const auto it = componentsStorage.find(key); it != componentsStorage.end()) {
-        auto value = static_cast<ComponentStorage<T>*>(it->second.get());
-        value->add(e->getId(), std::forward<Args>(args)...);
-        return;
+requires std::derived_from<T, IComponent>
+void Registry::emplace(EntityID id, Args&&... args) {
+    const auto key = std::type_index(typeid(T));
+
+    auto it = componentTypeToStorage.find(key);
+    if (it == componentTypeToStorage.end()) {
+        auto [newIt, _] = componentTypeToStorage.emplace(key, std::make_unique<ComponentStorage<T>>());
+        it = newIt;
     }
     
-    componentsStorage[key] = std::make_unique<ComponentStorage<T>>();
-    auto value = static_cast<ComponentStorage<T>*>(componentsStorage[key].get());
-    value->add(e->getId(), std::forward<Args>(args)...);
+    auto storage = static_cast<ComponentStorage<T>*>(it->second.get());
+    storage->add(id, std::forward<Args>(args)...);
 }
 
 template<typename T>
-std::vector<T>& Registry::get() {
-    auto key = std::type_index(typeid(T));
-    if (const auto it = componentsStorage.find(key); it != componentsStorage.end()) {
-        ComponentStorage<T> *c = static_cast<ComponentStorage<T>*>(it->second.get());
-        return c->getAll();
+requires std::derived_from<T, IComponent>
+std::optional<std::span<T>> Registry::getComponents() const {
+    const auto key = std::type_index(typeid(T));
+    if (const auto it = componentTypeToStorage.find(key); it != componentTypeToStorage.end()) {
+        ComponentStorage<T> *store = static_cast<ComponentStorage<T>*>(it->second.get());
+        return store->getAll();
     }
 
-    throw std::runtime_error("Component does not exist");
+    return std::nullopt;
+}
+
+template<typename T>
+requires std::derived_from<T, IComponent>
+T* Registry::getComponent(EntityID id) {
+    const auto key = std::type_index(typeid(T));
+    if (const auto it = componentTypeToStorage.find(key); it != componentTypeToStorage.end()) {
+        ComponentStorage<T> *store = static_cast<ComponentStorage<T>*>(it->second.get());
+        return store->get(id);
+    }
+
+    return nullptr;
 }
 
 #endif
